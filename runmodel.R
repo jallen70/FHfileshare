@@ -4,21 +4,27 @@ rm(list = ls())
 
 #path to the working directory
 
-#wd <- "Z:/DEC methods/tools - R/Working_project_folders/NCL_DEC0002 Familial hypercholesterolaemia/Current2016-2017/"
-wd <- "/Users/JoyA/Documents/DEC WORK/FH/Current2016-2017"
+wd <- "Z:/DEC methods/tools - R/Working_project_folders/NCL_DEC0002 Familial hypercholesterolaemia/Current2016-2017/"
+#wd <- "/Users/JoyA/Documents/DEC WORK/FH/Current2016-2017"
 setwd(wd)
 
 #load in packages required
 source("loadpackages.R")
 loadpackages()
 
+library("dplyr")
+library("plyr")
+library("pROC")
+library("magrittr")
+
 #load functions script
 source("functions/functions.R")
+source("functions/univ_regression.R")
 
 #load script to read in data
 dataset = "ahsn" # ahsn or full if complete set
 SNPs = "F" # SNP analysis or not?
-save_plots  = "F"  #overwrite saved plots?
+save_plots  = "T"  #overwrite saved plots?
 
 source("functions/read_clean_update.R")
 readingfiles(dataset, SNPs)
@@ -30,6 +36,12 @@ inputs <- inputs()
 # FOR CHECKS #
 sapply(mydata,class)
 #View(total_study)
+
+
+##### median nonHDL levels from HSE data
+
+median_nonhdlM <- 4
+median_nonhdlF <- 3.8
 
 ### GENERALISED LINEAR MODEL ##############################
 # response variable - outcome(MD, NMD)
@@ -50,8 +62,11 @@ sapply(mydata,class)
 
 #load snp score plotting script
 median_nonhdl <- median(mydata$nonhdl, na.rm = TRUE)
-mydata$MoM <- mydata$nonhdl/median_nonhdl
 
+#mydata <- mydata[mydata$Sex!= "",] %<>% mutate(MoM = ifelse(Sex == "MALE",nonhdl/median_nonhdlM,  nonhdl/median_nonhdlF))
+# two way pipe, subsets data into only those with no value for sex
+
+mydata <- mydata %>% mutate(MoM = ifelse(Sex == "MALE",nonhdl/median_nonhdlM,  nonhdl/median_nonhdlF), ifelse(Sex == "", NA, MoM))
 #visualise missing data
 #
 
@@ -71,7 +86,7 @@ missmap(mydata, main = "Missing values vs observed")
 
 
 
-  mydata <- mydata[!is.na(mydata$outcome),]  
+  mydata <- subset(mydata,mydata$outcome != "")  
   n_after <- nrow(mydata)
   message(paste0(nparticipants - n_after, " participants removed as missing outcome data"))
  
@@ -91,6 +106,15 @@ missmap(mydata, main = "Missing values vs observed")
 # exp(cbind(OR = coef(mldl), confint(mldl)))#odds ratio and CI
 # p <- predict(mldl,mydata,type='response')
 
+if(dataset == "ahsn"){
+  figfilepath = "figures/ahsn/"
+  tabfilepath = "output/ahsn/"
+} else {
+  figfilepath = "figures/full/"
+  tabfilepath = "output/full/"
+}
+    
+    
 
 ##exploratory analysis: plots
 
@@ -99,15 +123,15 @@ p <- boxplot(mydata$age, xlab="age", cex.lab=2)
 p
 
 if (save_plots){
-dev.copy(png,'figures/boxplotage.png')
-dev.off()
+  dev.copy(png,paste0(figfilepath,'boxplotage.png'))
+  dev.off()
 }
 
 
 #dutchscore
 p <- boxplot(mydata$dutchscore, xlab="Dutchscore", cex.lab=2)
 if (save_plots){
-  dev.copy(png,'figures/boxplotDLCN.png')
+  dev.copy(png,paste0(figfilepath,'boxplotDLCN.png'))
   dev.off()
 }
 
@@ -119,7 +143,7 @@ p <- p + geom_boxplot(aes(fill = outcome)) +  labs(x = "Mutation detected", y = 
 p
 
 if (save_plots){
-  dev.copy(png,'figures/boxplotDLCNvsoutcome.png')
+  dev.copy(png,paste0(figfilepath,'boxplotDLCNvsoutcome.png'))
   dev.off()
 }
 
@@ -127,7 +151,7 @@ p <- boxplot(mydata$MoM, xlab="MoM", cex.lab=2)
 p
 
 if (save_plots){
-  dev.copy(png,'figures/boxplotMoM.png')
+  dev.copy(png,paste0(figfilepath,'boxplotMoM.png'))
   dev.off()
 }
 
@@ -136,7 +160,7 @@ p <- ggplot(mydata, aes(outcome,MoM))
 p <- p + geom_boxplot(aes(fill = outcome))
 p
 if (save_plots){
-  dev.copy(png,'figures/boxplotMoMvsoutcome.png')
+  dev.copy(png,paste0(figfilepath,'boxplotMoMvsoutcome.png'))
   dev.off()
 }
 
@@ -146,7 +170,7 @@ p <- ggplot(mydata, aes(outcome,TotalC))
 p <- p + geom_boxplot(aes(fill = outcome))
 p
 if (save_plots){
-  dev.copy(png,'figures/boxplotTotalCvoutome.png')
+  dev.copy(png,paste0(figfilepath,'boxplotTotalCvoutome.png'))
   dev.off()
 }
 
@@ -154,7 +178,7 @@ p <- ggplot(mydata, aes(outcome,LDLC))
 p <- p + geom_boxplot(aes(fill = outcome))
 p
 if (save_plots){
-  dev.copy(png,'figures/boxplotLDLCoutcome.png')
+  dev.copy(png,paste0(figfilepath,'boxplotLDLCoutcome.png'))
   dev.off()
 }
 
@@ -162,7 +186,7 @@ p <- ggplot(mydata, aes(outcome,nonhdl))
 p <- p + geom_boxplot(aes(fill = outcome))
 p
 if (save_plots){
-  dev.copy(png,'figures/boxplotnonhdloutcome.png')
+  dev.copy(png,paste0(figfilepath,'boxplotnonhdloutcome.png'))
   dev.off()
 }
 
@@ -171,7 +195,7 @@ p <- ggplot(mydata, aes(outcome,Trigly))
 p <- p + geom_boxplot(aes(fill = outcome))
 p
 if (save_plots){
-  dev.copy(png,'figures/boxplotTriglyoutcome.png')
+  dev.copy(png,paste0(figfilepath,'boxplotTriglyoutcome.png'))
   dev.off()
 }
 
@@ -182,7 +206,7 @@ p <- ggplot(mydata, aes(NoRels50.risk, fill = outcome))
 p <- p + geom_histogram()
 p
 if (save_plots){
-  dev.copy(png,'figures/rels50risk_hist.png')
+  dev.copy(png,paste0(figfilepath,'rels50risk_hist.png'))
   dev.off()
 }
 
@@ -190,14 +214,14 @@ p <- ggplot(mydata, aes(NoRels25.risk, fill = outcome))
 p <- p + geom_histogram()
 p
 if (save_plots){
-  dev.copy(png,'figures/rels25risk_hist.png')
+  dev.copy(png,paste0(figfilepath,'rels25risk_hist.png'))
   dev.off()
 }
 
 
 
 now <- format(Sys.time(), "%b%d%H%M%S")
-filename <- paste0("output/",now,"demographics.csv")
+filename <- paste0( tabfilepath,now,"demographics.csv")
 
 
 #how many variables do we have?
@@ -220,6 +244,8 @@ for (i in 1:nvari) {
 
 
 # 
+
+if (save_plots){
 counts0 <- table(mydata$Sex)
 counts2 <- table(mydata$C_TendXan)
 counts3 <- table(mydata$C_CornArcus)
@@ -239,10 +265,10 @@ barplot(counts2,xlab="Tendon Xanthomas",  cex.lab=1.8, cex.axis=1.5)
 barplot(counts3, xlab="CornArcus",  cex.lab=1.8, cex.axis=1.5)
 barplot(counts4, xlab="LDL", cex.lab=1.8, cex.axis=1.5)
 barplot(counts5, xlab="DLCN",  cex.lab=1.8, cex.axis=1.5)
-if (save_plots){
-  dev.copy(png,'figures/demographics1.png')
+
+  dev.copy(png,paste0(figfilepath,'demographics1.png'))
   dev.off()
-}
+
 
 
 
@@ -251,11 +277,12 @@ barplot(counts6, xlab="Centile interval",  cex.lab=1.8, cex.axis=1.5)
 barplot(counts7, xlab="Outcome",  cex.lab=1.8, cex.axis=1.5)
 barplot(counts8, xlab="NoRels at 25% risk",  cex.lab=1.8, cex.axis=1.5)
 barplot(counts9, xlab="NoRels at 50% risk",  cex.lab=1.8, cex.axis=1.5)
-if (save_plots){
-  dev.copy(png,'figures/demographics2.png')
-  dev.off()
-}
 
+  dev.copy(png,paste0(figfilepath,'demographics2.png'))
+  dev.off()
+
+
+}
 
 counts0 <- table(mydata$outcome)
 prev=counts0[1]/(counts0[1]+counts0[2])
@@ -287,14 +314,29 @@ nrow(mydata)
 #making it easier to see heterogeneity of the variance. The fourth one allow 
 #detecting points that have a too big impact on the regression coefficients 
 #and that should be removed. 
-i = 1
 
-filename2 <- paste0("output/",now,"univariateanalysismodels.csv")
-filename3 <- paste0("output/",now,"univariateanalysiscoeffs.csv")
+
+par(mfrow=c(1,1))
+
+filename2 <- paste0( tabfilepath,now,"univariateanalysismodels.csv")
+filename3 <- paste0( tabfilepath,now,"univariateanalysiscoeffs.csv")
+
+# to avoid a loop we should write a function for this.
+ 
 
 for (i in 1:nvari) {
   
-  mydata1 <- subset(mydata, mydata[i] != "" | mydata[i] != "UNKNOWN" | !is.na(mydata[i]))
+  mydata1 <- subset(mydata, mydata[i] != "Unknown")
+  mydata1 <- subset(mydata1, mydata1[i] != "")
+  mydata1 <- subset(mydata1, mydata1[i] != "UNKNOWN" & mydata1$outcome != "")
+  
+  mydata1 <- subset(mydata1, !is.na(mydata1[i]))
+  #mydata %>% 
+  #  subset(mydata[i] != "Unknown")  %>% subset(mydata[i] != "") %>% subset(mydata[i] != "UNKNOWN") 
+  #%>% subset(!is.na(mydata[i]))
+#  subset(mydata[i] != "" | mydata[i] != "UNKNOWN" & mydata$outcome != "" | !is.na(mydata[i])
+
+  # mydata1 <- subset(mydata1,  mydata1$outcome == "")
   vari = mydata1[,i]
   vari_name = names(mydata1[i])
   
@@ -302,106 +344,34 @@ for (i in 1:nvari) {
       vari_name == "results" | vari_name == "outcome" | vari_name == "prob" ) next 
   
   nrow(mydata1)
-  m <- glm(outcome~vari, family = "binomial", data = mydata1, maxit= 100)
   
-  summary(m) # beta, Std.Error, z value, Pr(> |z|)
-  levs <- nlevels(mydata1[,i])
-  tidy(m)
-  
-  
-  if(levs == 0){
-    coeff <- cbind(nrow(mydata1), round(coef(m)[2],4),paste0('(', round(confint(m)[2,1],4), ',', round(confint(m)[2,2],4),')'), 
-                paste0(round(exp(cbind(OR = coef(m),confint(m)))[2,1],4), 
-                       ' (', round(exp(cbind(OR = coef(m),confint(m)))[2,2],4), ',', 
-                       round(exp(cbind(OR = coef(m),confint(m)))[2,3],4), ')'), round(coef(summary(m))[2,4],4))#odds ratio and CI
-
-  }  else {
-    coeff <-ldply(0:levs-2, function(j) cbind(nrow(mydata1), round(coef(m)[j+2],4),paste0('(', round(confint(m)[j+2,1],4), ',', round(confint(m)[j+2,2],4),')'), 
-           paste0(round(exp(cbind(OR = coef(m),confint(m)))[j+2,1],4), 
-        ' (', round(exp(cbind(OR = coef(m),confint(m)))[j+2,2],4), ',', 
-           round(exp(cbind(OR = coef(m),confint(m)))[j+2,3],4), ')'), round(coef(summary(m))[j+2,4],4)))
-   # does not support row names, but necessary for read into table!
-  }
-  
-  #par(mfrow = c(2, 2))
-  #plot(m)
-  aic=extractAIC(m)
-  mydata1$prob=predict(m,type=c("response"))
-  predRisk <- predRisk(m)
-  g <- roc(outcome ~ prob, data = mydata1, ci=TRUE)
-  auroc=ci.auc(g)
-  g0 <- plot.roc(mydata1$outcome, mydata1$prob, percent=T, ci=TRUE, main = (paste0(vari_name)))
-  o1a=cbind(deviance(m),aic[2],auroc[2], auroc[1], auroc[3])
-  MR=cbind(coef(m),confint(m), exp(cbind(OR = coef(m),confint(m))), coef(summary(m))[,4])#odds ratio and CI
-  mdf = tidy(m)
- # m1rows = cbind(mdf, o1a)
-
+ 
+  m1 <- univ_regression(vari,vari_name, mydata1)
   
   #### square variable transform ###
   if (class(vari) != "factor"){
   vari2=vari^2
-  m2 <- glm(outcome~vari + vari2, family = "binomial", data = mydata1, maxit= 100)
- 
-  summary(m2)
-  coeff_m2=cbind(nrow(mydata1), round(coef(m2)[2],4),paste0('(', round(confint(m2)[2,1],4), ',', round(confint(m2)[2,2],4),')'), 
-                 paste0(round(exp(cbind(OR = coef(m2),confint(m2)))[2,1],4), 
-                        ' (', round(exp(cbind(OR = coef(m2),confint(m2)))[2,2],4), ',', 
-                        round(exp(cbind(OR = coef(m2),confint(m2)))[2,3],4), ')'), round(coef(summary(m2))[2,4],4))#odds ratio and CI
-  
-  aic2=extractAIC(m2)
-  mydata1$prob2=predict(m2,type=c("response"))
-  predRisk2 <- predRisk(m2)
-  g2 <- roc(outcome ~ prob2, data = mydata1, ci=TRUE)
-  auroc2=ci.auc(g2)
-  g02 <- plot.roc(mydata1$outcome, mydata1$prob2, percent=TRUE, ci=TRUE, main = (paste0(vari_name))) 
-  o1a2=cbind(deviance(m2),aic2[2],auroc2[2], auroc2[1], auroc2[3])
+  m2 <- univ_regression(vari + vari2,vari_name, mydata1)
 
-  m2df = tidy(m2)
-  } else  { 
-   m2 <- m
-   o1a2 <- o1a
-   aic2 <- aic
-   auroc2 <- auroc
+   } else  { 
+    m2 <- m1
   }
   
-  #m2rows = cbind(m2df, o1a2)
-
+ 
   ### log transform age ###
   # only for coninuous variables
   if (class(vari) != "factor"){
+    m3 <- univ_regression(log(vari),vari_name, mydata1)
   
+   } else {
+   
+   m3 <- m2
 
-  m3 <- glm(outcome ~ log(vari), family = "binomial", data = mydata1, maxit= 100)
+   }
+   
+  # compare models
   
-  summary(m3)
-  coeff_m3=cbind(nrow(mydata1), round(coef(m3)[2],4),paste0('(', round(confint(m3)[2,1],4), ',', round(confint(m3)[2,2],4),')'), 
-                 paste0(round(exp(cbind(OR = coef(m3),confint(m3)))[2,1],4), 
-                        ' (', round(exp(cbind(OR = coef(m3),confint(m3)))[2,2],4), ',', 
-                        round(exp(cbind(OR = coef(m3),confint(m3)))[2,3],4), ')'), round(coef(summary(m3))[2,4],4))#odds ratio and CI
-  
-  aic3=extractAIC(m3)
-  mydata1$prob3=predict(m3,type=c("response"))
-  predRisk3 <- predRisk(m3)
-  g3 <- roc(outcome ~ prob3, data = mydata1, ci=TRUE)
-  auroc3=ci.auc(g3)
-  g03 <- plot.roc(mydata1$outcome, mydata1$prob3, percent=TRUE, ci=TRUE, main = (paste0(vari_name)))
-  o1a3=cbind(deviance(m3),aic3[2],auroc3[2], auroc3[1], auroc3[3])#odds ratio and CI
-  
-  m3df = tidy(m3)
- # m3rows = cbind(m3df, o1a3)
-  # compare aic, deviance and auroc to decide which to use for each variable in regression
-  
-  } else {
-  
-  m3 <- m2
-  o1a3 <- o1a2
-  aic3 <- aic2
-  auroc3 <- auroc2
-  }
-  
-  
-  
-  modelinfo <- rbind.data.frame(o1a,o1a2,o1a3)
+  modelinfo <- rbind.data.frame(m1$o1a,m2$o1a,m3$o1a)
   modelinfo$variable <- vari_name
   colnames(modelinfo) <- c("deviance", "aic", "auroc", 
                             "ciauroc", "ciauroc", "variable")
@@ -409,16 +379,16 @@ for (i in 1:nvari) {
   # preference to linear model
   # however if other model increases the auroc >0.1 and decreases AIC by >4, choose that instead
   
-  min(aic2[2], aic3[2])
-  max(auroc2[2], auroc3[3])
+  min(m2$aic[2], m3$aic[2])
+  max(m2$auroc[2], m3$auroc[2])
   
   # diff in aics between linear and model 2
-  diff_aic2 = aic[2] - aic2[2]
-  diff_aic3 = aic[2] - aic3[2]
+  diff_aic2 = m1$aic[2] - m2$aic[2]
+  diff_aic3 = m1$aic[2] - m3$aic[2]
   
   # diff in aurocs between linear and model 3
-  diff_auroc2 = auroc2[2] - auroc[2] 
-  diff_auroc3 = auroc3[2] - auroc[2]
+  diff_auroc2 = m2$auroc[2] - m1$auroc[2] 
+  diff_auroc3 = m3$auroc[2] - m1$auroc[2]
   
   #default choice is model 1
   
@@ -434,8 +404,8 @@ for (i in 1:nvari) {
     }
   
   # check between models m2 and m3
-  diff_aic23 = aic2[2] - aic3[2]
-  diff_auroc23 = auroc3[3] - auroc2[2] 
+  diff_aic23 = m2$aic[2] - m3$aic[2]
+  diff_auroc23 = m3$auroc[3] - m2$auroc[2] 
   if (diff_aic23 >4 & diff_auroc23 > 0.1) {
     message("For variable", vari_name, "AIC model 3 lower AIC and higher AUC than model 2")
     modelchoice <- 3
@@ -445,55 +415,51 @@ for (i in 1:nvari) {
   
   # write out info about model choices
   
-  if (i == 1){
-  write.table(paste0(vari_name), file= filename2, sep = ",", row.names = F, col.names=F, append=T)
-  write.table(modelinfo, file=filename2, sep = ",", row.names = F, col.names=T, append=T)
-  } else {
-  write.table(paste0(vari_name), file=filename2, sep = ",", row.names = F, col.names=F, append=T)
-  write.table(modelinfo, file=filename2, sep = ",", row.names = F, col.names=F, append=T)
-  }
+  
   
   # write out details about the model choosen
   if(modelchoice == 1){
-    write_output(mdf, vari_name,filename2)
-    write_output(coeff_m,vari_name,filename3)
+    df <- tidy(m1$m)
+    df$mchoice <- modelchoice
+    write_output(modelinfo, vari_name,filename2, i)
+    write_output(m1$coeff,vari_name,filename3, i)
     #coefficient details
     
-    write.table(paste0(vari_name), file= filename3, sep = ",", row.names = F, col.names=F, append=T)
-    write.table(coeff_m, file=filename3, sep = ",", row.names = F, col.names=F, append=T)
-    g0
+ 
     if (save_plots){
-      g0 
-      name <- paste0("figures/",now,"roc",vari_name, ".png")
+      m1$g0 
+      name <- paste0(figfilepath,now,"roc",vari_name, ".png")
       dev.copy(png,name)
       dev.off()
     }  
     
     }
   if(modelchoice == 2){
-    write.table(paste0(vari_name), file=filename2, sep = ",", row.names = F, col.names=F, append=T)
-    write.table(m2df, file=filename2, sep = ",", row.names = F, col.names=F, append=T)
+    df <- tidy(m2$m)
+    df$mchoice <- modelchoice
+    write_output(modelinfo, vari_name,filename2, i)
+    write_output(m2$coeff,vari_name,filename3,i)
     
-    write.table(paste0(vari_name), file=filename3, sep = ",", row.names = F, col.names=F, append=T)
-    write.table(coeff_m2, file=filename3, sep = ",", row.names = F, col.names=F, append=T)
+
     
     if (save_plots){
       g02 
-      name <- paste0("figures/",now,"roc",vari_name, ".png")
+      name <- paste0(figfilepath,now,"roc",vari_name, ".png")
       dev.copy(png,name)
       dev.off()
     } 
      }
   if(modelchoice == 3){
-    write.table(paste0(vari_name), file=filename2, sep = ",", row.names = F, col.names=F, append=T)
-    write.table(m3df, file=filename2, sep = ",", row.names = F, col.names=F, append=T)
+    df <- tidy(m3$m)
+    df$mchoice <- modelchoice
+    write_output(modelinfo, vari_name,filename2, i)
+    write_output(m3$coeff,vari_name,filename3, i)
     
-    write.table(paste0(vari_name), file=filename3, sep = ",", row.names = F, col.names=F, append=T)
-    write.table(coeff_m3, file=filename3, sep = ",", row.names = F, col.names=F, append=T)
-    
+
+#     
     if (save_plots){
       g03 
-      name <- paste0("figures/",now,"roc",vari_name, ".png")
+      name <- paste0(figfilepath,now,"roc",vari_name, ".png")
       dev.copy(png,name)
       dev.off()
     } 
@@ -514,12 +480,49 @@ modeldata <- cbind.data.frame(mydata$outcome, mydata$age, mydata$Sex, mydata$dut
 colnames(modeldata) <- c("outcome", "age", "Sex", "dutchscore", "LDLC", "nonhdl", "MoM")
 # check correlations
 
-with(modeldata, tapply(age, outcome, mean))
-with(modeldata, tapply(dutchscore, outcome, mean))
-with(modeldata, tapply(LDLC, outcome, mean))
-with(modeldata, tapply(nonhdl, outcome, mean))
-with(modeldata, tapply(MoM, outcome, mean))
-    
+with(modeldata, tapply(age, outcome, mean,na.rm = TRUE))
+with(modeldata, tapply(dutchscore, outcome, mean,na.rm = TRUE))
+with(modeldata, tapply(LDLC, outcome, mean,na.rm = TRUE))
+with(modeldata, tapply(nonhdl, outcome, mean,na.rm = TRUE))
+with(modeldata, tapply(MoM, outcome, mean,na.rm = TRUE))
+
+
+################ Dutch score alone, and break it down ################
+modeldata <- modeldata[which(mydata$dutchscore != ""),]
+
+glm.out <- glm(outcome ~ dutchscore, family=binomial, data=modeldata)
+summary(glm.out)
+aic=extractAIC(glm.out)
+anova(glm.out, test="Chisq")
+modeldata$prob=predict(glm.out,type=c("response"))
+predRisk <- predRisk(glm.out)
+g <- roc(outcome ~ prob, data = modeldata, ci=TRUE, levels=c("NMD", "MD"))
+g
+auroc=ci.auc(g)
+g0 <- plot.roc(modeldata$outcome, modeldata$prob, percent=TRUE, ci=TRUE, levels=c("NMD", "MD"), main ="Dutch Score alone" )
+o1a=cbind(deviance(glm.out),aic[2],auroc[2], auroc[1], auroc[3])#odds ratio and CI
+
+# do we want to break down DLCN score?  replace fasting LDL with nonhdl.  
+# then look at reclassification
+modeldlcndata <- cbind.data.frame(mydata$outcome, mydata$age, mydata$Sex, mydata$DLCN, 
+                                  mydata$A_max, mydata$B_max, mydata$C_max, 
+                                  mydata$D_max, mydata$LDLC,  mydata$nonhdl, mydata$gamlass_centile)
+colnames(modeldlcndata) <- c("outcome", "age",  "Sex", "dutchscore", "A", "B", "C", "D", "LDLC", "nonhdl", "centile")
+
+# replace centile levels with a score, 1-8
+
+source("functions/functions.R")
+
+modeldlcndata <- remove_missing(modeldlcndata, modeldlcndata$outcome)
+modeldlcndata <- remove_missing(modeldlcndata, modeldlcndata$Sex)
+modeldlcndata <- remove_missing(modeldlcndata, modeldlcndata$LDLC)
+modeldlcndata <- remove_missing(modeldlcndata, modeldlcndata$A)
+modeldlcndata <- remove_missing(modeldlcndata, modeldlcndata$B)
+modeldlcndata <- remove_missing(modeldlcndata, modeldlcndata$C)
+modeldlcndata <- remove_missing(modeldlcndata, modeldlcndata$D)
+modeldlcndata <- remove_missing(modeldlcndata, modeldlcndata$age)
+
+
 glm.out <- glm(outcome ~ dutchscore, family=binomial, data=modeldata)
 summary(glm.out)
 aic=extractAIC(glm.out)
@@ -531,6 +534,9 @@ g
 auroc=ci.auc(g)
 g0 <- plot.roc(mydata$outcome, mydata$prob, percent=TRUE, ci=TRUE, main ="Dutch Score alone" )
 o1a=cbind(deviance(glm.out),aic[2],auroc[2], auroc[1], auroc[3])#odds ratio and CI
+
+
+
 
 
 glm.out2 <- glm(outcome ~ LDLC + age + factor(Sex), family=binomial, data=modeldata)
@@ -578,17 +584,7 @@ colnames(modeldata) <- c("outcome", "age",  "Sex", "dutchscore", "A", "B", "C", 
 
 
 
-glm.out <- glm(outcome ~ dutchscore, family=binomial, data=modeldata)
-summary(glm.out)
-aic=extractAIC(glm.out)
-anova(glm.out, test="Chisq")
-modeldata$prob=predict(glm.out,type=c("response"))
-predRisk <- predRisk(glm.out)
-g <- roc(outcome ~ prob, data = modeldata, ci=TRUE)
-g
-auroc=ci.auc(g)
-g0 <- plot.roc(mydata$outcome, mydata$prob, percent=TRUE, ci=TRUE, main ="Dutch Score alone" )
-o1a=cbind(deviance(glm.out),aic[2],auroc[2], auroc[1], auroc[3])#odds ratio and CI
+
 
 #### replace ducth score LDLC (D_max) with centiles
 
