@@ -76,36 +76,90 @@ col_table <-function(dataframe){
 
 convert_glmcentiles <- function(x, y, z)  {
   x1 <- ""
-  if(x != ""){
-    if (x == "MALE") {
-      cen <- cm
-    } else {
-      cen <- cw
-    }
-    if(y  > 16 & y < max(cen$age)) {
-      #ageindex <- y - 15
-      if(!is.na(z)){
-        if(z >=cen[y - 15,8])   x1 <- ">99.5"
-        if(z >=cen[y - 15,7] & z < cen[y - 15,8]) x1 <- "99-99.5"
-        if(z >=cen[y - 15,6] & z < cen[y - 15,7]) x1 <- "97.5-99"
-        if(z >=cen[y - 15,5] & z < cen[y - 15,6]) x1 <- "95-97.5"
-        if(z >=cen[y - 15,4] & z < cen[y - 15,5]) x1 <- "90-95"
-        if(z >=cen[y - 15,3] & z < cen[y - 15,4]) x1 <- "80-90"
-        if(z >=cen[y - 15,2] & z < cen[y - 15,3]) x1 <- "75-80"
-        if(z  < cen[y - 15,2]) x1 <- "<75"
-      } 
-    } 
-  } 
-  return(x1)
+  if(x != "" ){
+    if(!is.na(x)){
+     if (x == "MALE") {
+       cen <- cm
+     } else {
+       cen <- cw
+     }
+     if(y  > 16 & y < max(cen$age)) {
+       #ageindex <- y - 15
+       if(!is.na(z)){
+         if(z >=cen[y - 15,8])   x1 <- ">99.5"
+         if(z >=cen[y - 15,7] & z < cen[y - 15,8]) x1 <- "99-99.5"
+         if(z >=cen[y - 15,6] & z < cen[y - 15,7]) x1 <- "97.5-99"
+         if(z >=cen[y - 15,5] & z < cen[y - 15,6]) x1 <- "95-97.5"
+         if(z >=cen[y - 15,4] & z < cen[y - 15,5]) x1 <- "90-95"
+         if(z >=cen[y - 15,3] & z < cen[y - 15,4]) x1 <- "80-90"
+         if(z >=cen[y - 15,2] & z < cen[y - 15,3]) x1 <- "75-80"
+         if(z  < cen[y - 15,2]) x1 <- "<75"
+       } 
+     } else{
+       x1 <- ""
+     }
+     }
+   } 
+   return(x1)
 } 
 
 
 #  function to write table of models and coeffs in 
 
-write_output <- function(x, vari_name, filename){
-  write.table(paste0(vari_name), file=filename, sep = ",", row.names = F, col.names=F, append=T)
-  write.table(x, file=filename2, sep = ",", row.names = F, col.names=F, append=T)
+write_output <- function(x, vari_name, filename, i){
+  col <- F
+  if (i == 1) col <- T
+  
+  write.table(paste0(vari_name), file=filename, sep = ",", row.names = F, col.names=col, append=T)
+  write.table(x, file=filename, sep = ",", row.names = F, col.names=col, append=T)
 }
+
+remove_missing <- function(data, colname){
+  
+  data <- subset(data, colname != "Unknown")
+  data <- subset(data, colname != "")
+  data <- subset(data, colname != "UNKNOWN" & colname != "")
+  
+  data <- subset(data, !is.na(colname))
+  
+}
+
+
+# missing data
+# use MICE
+#MICE assumes missing at random values
+
+imputing_data  <- function(data) {
+  
+  data[data==""]<-NA
+  data[data == "UNKNOWN"] <- NA
+  data[data == "Unknown"] <- NA
+  
+  imputed_Data <- mice(data, m=5, maxit = 50, method = 'pmm', seed = 500)
+  summary(imputed_Data)
+  
+  return(imputed_Data)
+  
+}
+
+
+replace_data <- function(data){
+  
+  #normality checks
+  #qqnorm(modeldata$dutchscore)
+  #qqline(modeldata$dutchscore, col = 2)
+  result <- shapiro.test(data)
+  #dutchscore is normally distributed
+  if(result$p.value < 0.05){ #normally distributed so replace with mean of dist
+  data[is.na(data)] <- mean(data,na.rm=T)
+  } else {
+    data[is.na(data)] <- median(data,na.rm=T)
+  }
+  
+  return(data)
+}
+
+
 
 
 

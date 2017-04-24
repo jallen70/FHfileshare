@@ -6,7 +6,7 @@ readingfiles <- function(dataset, SNPs){
 #
 # 4th Jan - n= 414 for full dataset, n= 258 for ahsn 
   if(SNPs){
-    fhfull = read.csv("Raw_data/final_full_fhspreadsheet_w_snps_100417.csv", nrow = 414, stringsAsFactors=F)   
+    fhfull = read.csv("Raw_data/final_full_fhspreadsheet_w_snps_240417.csv", nrow = 414, stringsAsFactors=F)   
   } else {
     fhfull = read.csv("Raw_data/Update final_full_fhspreadsheet update 100417.csv", nrow = 414, stringsAsFactors=F)  
   }
@@ -25,6 +25,12 @@ total_study = subset(total_study_full,total_study_full$Request. == "FH_original 
 nparticipants = nrow(total_study)
 assign("nparticipants",nparticipants,envir = .GlobalEnv)
 colnames(total_study)
+
+## need to remove erronious 'ME' in SEX data
+
+total_study$Sex[total_study$Sex == "ME"] <- ""
+total_study$Sex[is.na(total_study$Sex)] <- ""
+
 
 ##### BE ABLE TO UNCOMMENT WHEN NEW PHENOTYPIC DATA #### ? 
 #Date of births match?
@@ -263,7 +269,7 @@ cw$X <- NULL
 assign("cm",cm,envir = .GlobalEnv)
 assign("cw", cw, envir=.GlobalEnv)
 
-total_study <- total_study %>%  rowwise() %>% mutate(gamlass_centile = convert_glmcentiles(Sex, age, nonhdl))
+total_study <- total_study %>%  dplyr::rowwise() %>% dplyr::mutate(gamlass_centile = convert_glmcentiles(Sex, age, nonhdl))
 
 total_study$gamlass_centile[total_study$gamlass_centile == "NA"] <- "Unknown" 
 total_study$gamlass_centile[total_study$gamlass_centile == ""] <- "Unknown"
@@ -281,22 +287,23 @@ total_study$outcome[total_study$Overall == "Seq NMD and MiSeq NMD"] <- "NMD"
 if (SNPs){
   mydata = data.frame(total_study$age,total_study$Sex, 
                       total_study$Dutch.score.1,total_study$A_NoRels50.risk, total_study$A_NoRels25.risk,
+                      total_study$A_max, total_study$B_max,
                       total_study$C_TendXan, total_study$C_CornArcus,
                       total_study$TotalC, total_study$Lipo, total_study$LDLC, total_study$nonhdl, total_study$Trigly,
                       total_study$LDL, total_study$DLCN, total_study$gamlass_centile,total_study$SNP.score, total_study$SNP.decile,
                       total_study$Overall, total_study$outcome)
   
-  colnames(mydata) <- c("age", "Sex", "dutchscore", "NoRels50.risk", "NoRels25.risk",
+  colnames(mydata) <- c("age", "Sex", "dutchscore", "NoRels50.risk", "NoRels25.risk", "A_max", "B_max",
                         "C_TendXan", "C_CornArcus", "TotalC", "Lipo", "LDLC", "nonhdl", "Trigly",
                         "LDL", "DLCN", "gamlass_centile", "SNPscore", "SNPdecile", "results", "outcome")
 } else {
   mydata = data.frame(total_study$age,total_study$Sex, 
-                      total_study$Dutch.score.1,total_study$A_NoRels50.risk, total_study$A_NoRels25.risk,
+                      total_study$Dutch.score.1,total_study$A_NoRels50.risk, total_study$A_NoRels25.risk, total_study$A_max, total_study$B_max,
                       total_study$C_TendXan, total_study$C_CornArcus,
                       total_study$TotalC, total_study$Lipo, total_study$LDLC, total_study$nonhdl, total_study$Trigly,
                       total_study$LDL, total_study$DLCN,total_study$gamlass_centile, total_study$Overall, total_study$outcome)
   
-  colnames(mydata) <- c("age", "Sex", "dutchscore", "NoRels50.risk", "NoRels25.risk",
+  colnames(mydata) <- c("age", "Sex", "dutchscore", "NoRels50.risk", "NoRels25.risk", "A_max", "B_max",
                         "C_TendXan", "C_CornArcus", "TotalC", "Lipo", "LDLC", "nonhdl", "Trigly",
                         "LDL", "DLCN", "gamlass_centile", "results", "outcome")
 }

@@ -3,31 +3,39 @@
 univ_regression <- function(vari, vari_name, mydata1){
   
   nrow(mydata1)
-  m <- glm(outcome~vari, family = "binomial", data = mydata1, maxit= 100)
-
+ 
   #summary(m) # beta, Std.Error, z value, Pr(> |z|)
-  droplevels(mydata1[,i])#, exclude = "Unknown")
-  #factor(mydata1[,i])
-  levs <- nlevels(subset(mydata1[,i], mydata1[,i] == "Unknown"))
+ 
   
-  ## NEED TO MINUS 1 if a level == unknown
-  #tidy(m)
   
-
+  if(class(vari) == "factor") {
+    mydata1[,i] <- droplevels(mydata1[,i])
+   # droplevels(mydata1[,i])
+   levs <- nlevels(mydata1[,i])
+  } else {
+    levs <- 0
+  }
+  
+  m <- glm(outcome~vari, family = "binomial", data = mydata1)
+  
+  
+  
   if(levs == 0){
    coeff <- cbind(paste0(vari_name), tidy(m)[2,1], nrow(mydata1), round(coef(m)[2],4),paste0('(', round(confint(m)[2,1],4), ',', round(confint(m)[2,2],4),')'), 
                  paste0(round(exp(cbind(OR = coef(m),confint(m)))[2,1],4), 
                         ' (', round(exp(cbind(OR = coef(m),confint(m)))[2,2],4), ',', 
-                        round(exp(cbind(OR = coef(m),confint(m)))[2,3],4), ')'), round(coef(summary(m))[2,4],4))#odds ratio and CI
+                        round(exp(cbind(OR = coef(m),confint(m)))[2,3],4), ')'), round(coef(summary(m))[2,4],15))#odds ratio and CI
   
   }  else {
-    coeff <-ldply(0:levs-2, function(j)  cbind(paste0(vari_name), tidy(m)[j+2,1], nrow(mydata1), round(coef(m)[j+2],4),paste0('(', round(confint(m)[j+2,1],4), ',', round(confint(m)[j+2,2],4),')'), 
-                                            paste0(round(exp(cbind(OR = coef(m),confint(m)))[j+2,1],4), 
-                                                   ' (', round(exp(cbind(OR = coef(m),confint(m)))[j+2,2],4), ',', 
-                                                   round(exp(cbind(OR = coef(m),confint(m)))[j+2,3],4), ')'), round(coef(summary(m))[j+2,4],4)))
+    coeff <-ldply(1:levs, function(j)  cbind(paste0(vari_name), tidy(m)[j,1], paste0(nrow(mydata1), " total, ", count(mydata1[,i])[j,2], " for ", levels(mydata1[,i])[j] ," factor" ), 
+                                             round(coef(m)[j],4),paste0('(', round(confint(m)[j,1],4), ',', round(confint(m)[j,2],4),')'), 
+                                            paste0(round(exp(cbind(OR = coef(m),confint(m)))[j,1],4), 
+                                                   ' (', round(exp(cbind(OR = coef(m),confint(m)))[j,2],4), ',', 
+                                                   round(exp(cbind(OR = coef(m),confint(m)))[j,3],4), ')'), round(coef(summary(m))[j,4],15)))
     }
 
 
+  
   aic=extractAIC(m)
   mydata1 <- mydata1 %>% mutate(prob = predict(m,type=c("response")))
   mydata1$prob=predict(m,type=c("response"))
