@@ -16,6 +16,7 @@ library("dplyr")
 library("plyr")
 library("pROC")
 library("magrittr")
+library("mice")
 
 #load functions script
 source("functions/functions.R")
@@ -25,6 +26,7 @@ source("functions/univ_regression.R")
 dataset = "ahsn" # ahsn or full if complete set
 SNPs = "F" # SNP analysis or not?
 save_plots  = "T"  #overwrite saved plots?
+imputation = "T" # exclude data which is missing or use imputation techniques?
 
 source("functions/read_clean_update.R")
 readingfiles(dataset, SNPs)
@@ -117,112 +119,15 @@ if(dataset == "ahsn"){
     
 
 ##exploratory analysis: plots
-
-#age
-p <- boxplot(mydata$age, xlab="age", cex.lab=2)
-p
-
-if (save_plots){
-  dev.copy(png,paste0(figfilepath,'boxplotage.png'))
-  dev.off()
+if(save_plots) {
+  source("functions/demographic_plots.R")
+  demographic_plots(mydata, figfilepath)
 }
-
-
-#dutchscore
-p <- boxplot(mydata$dutchscore, xlab="Dutchscore", cex.lab=2)
-if (save_plots){
-  dev.copy(png,paste0(figfilepath,'boxplotDLCN.png'))
-  dev.off()
-}
-
-
-p <- ggplot(mydata, aes(outcome, dutchscore))
-p <- p + geom_boxplot(aes(fill = outcome)) +  labs(x = "Mutation detected", y = "Dutch Lipid Clinic Network Score", size = 4) + 
-  theme(axis.text=element_text(size=12),
-        axis.title=element_text(size=14,face="bold"))
-p
-
-if (save_plots){
-  dev.copy(png,paste0(figfilepath,'boxplotDLCNvsoutcome.png'))
-  dev.off()
-}
-
-p <- boxplot(mydata$MoM, xlab="MoM", cex.lab=2)
-p
-
-if (save_plots){
-  dev.copy(png,paste0(figfilepath,'boxplotMoM.png'))
-  dev.off()
-}
-
-#MoM
-p <- ggplot(mydata, aes(outcome,MoM))
-p <- p + geom_boxplot(aes(fill = outcome))
-p
-if (save_plots){
-  dev.copy(png,paste0(figfilepath,'boxplotMoMvsoutcome.png'))
-  dev.off()
-}
-
-
-#Cholesterol
-p <- ggplot(mydata, aes(outcome,TotalC))
-p <- p + geom_boxplot(aes(fill = outcome))
-p
-if (save_plots){
-  dev.copy(png,paste0(figfilepath,'boxplotTotalCvoutome.png'))
-  dev.off()
-}
-
-p <- ggplot(mydata, aes(outcome,LDLC))
-p <- p + geom_boxplot(aes(fill = outcome))
-p
-if (save_plots){
-  dev.copy(png,paste0(figfilepath,'boxplotLDLCoutcome.png'))
-  dev.off()
-}
-
-p <- ggplot(mydata, aes(outcome,nonhdl))
-p <- p + geom_boxplot(aes(fill = outcome))
-p
-if (save_plots){
-  dev.copy(png,paste0(figfilepath,'boxplotnonhdloutcome.png'))
-  dev.off()
-}
-
-
-p <- ggplot(mydata, aes(outcome,Trigly))
-p <- p + geom_boxplot(aes(fill = outcome))
-p
-if (save_plots){
-  dev.copy(png,paste0(figfilepath,'boxplotTriglyoutcome.png'))
-  dev.off()
-}
-
-# outlier is potentially a mis-entry for HDLC of 104 rather than 1.04.  Checked with 
-#PI DN on 16th March 2017.  replace in analysis until return of results. 
-
-p <- ggplot(mydata, aes(NoRels50.risk, fill = outcome))
-p <- p + geom_histogram()
-p
-if (save_plots){
-  dev.copy(png,paste0(figfilepath,'rels50risk_hist.png'))
-  dev.off()
-}
-
-p <- ggplot(mydata, aes(NoRels25.risk, fill = outcome))
-p <- p + geom_histogram()
-p
-if (save_plots){
-  dev.copy(png,paste0(figfilepath,'rels25risk_hist.png'))
-  dev.off()
-}
-
-
+    
+    
 
 now <- format(Sys.time(), "%b%d%H%M%S")
-filename <- paste0( tabfilepath,now,"demographics.csv")
-
+filename <- paste0(tabfilepath,now,"demographics.csv")
 
 #how many variables do we have?
 nvari = ncol(mydata)
@@ -242,47 +147,6 @@ for (i in 1:nvari) {
 
 }
 
-
-# 
-
-if (save_plots){
-counts0 <- table(mydata$Sex)
-counts2 <- table(mydata$C_TendXan)
-counts3 <- table(mydata$C_CornArcus)
-counts4 <- table(mydata$LDL)
-counts5 <- table(mydata$DLCN)
-counts6 <- table(mydata$gamlass_centile)
-counts7 <- table(mydata$outcome)
-counts8 <- table(mydata$NoRels25.risk)
-counts9 <- table(mydata$NoRels50.risk)
-
-
-
-
-par(mfrow=c(2,3))
-barplot(counts0,xlab="Sex", cex.lab=1.8, cex.axis=1.5)
-barplot(counts2,xlab="Tendon Xanthomas",  cex.lab=1.8, cex.axis=1.5)
-barplot(counts3, xlab="CornArcus",  cex.lab=1.8, cex.axis=1.5)
-barplot(counts4, xlab="LDL", cex.lab=1.8, cex.axis=1.5)
-barplot(counts5, xlab="DLCN",  cex.lab=1.8, cex.axis=1.5)
-
-  dev.copy(png,paste0(figfilepath,'demographics1.png'))
-  dev.off()
-
-
-
-
-par(mfrow=c(2,2))
-barplot(counts6, xlab="Centile interval",  cex.lab=1.8, cex.axis=1.5)
-barplot(counts7, xlab="Outcome",  cex.lab=1.8, cex.axis=1.5)
-barplot(counts8, xlab="NoRels at 25% risk",  cex.lab=1.8, cex.axis=1.5)
-barplot(counts9, xlab="NoRels at 50% risk",  cex.lab=1.8, cex.axis=1.5)
-
-  dev.copy(png,paste0(figfilepath,'demographics2.png'))
-  dev.off()
-
-
-}
 
 counts0 <- table(mydata$outcome)
 prev=counts0[1]/(counts0[1]+counts0[2])
@@ -322,26 +186,70 @@ filename2 <- paste0( tabfilepath,now,"univariateanalysismodels.csv")
 filename3 <- paste0( tabfilepath,now,"univariateanalysiscoeffs.csv")
 
 # to avoid a loop we should write a function for this.
+
+
+if(imputation){
+  mydata1.mids <- imputing_data(mydata)
+  # mydata1.mids$imp$Sex
+  summary(mydata1.mids)
+  mydata1 <- mice::complete(mydata1.mids)
+  
+  sapply(mydata1, function(x) sum(is.na(x)))
+  # perform checks on data
+  #nonhdl
+  actual_means <- sapply(mydata,function(x) {
+    if(class(x) == "numeric" | class(x) == "integer") {mean(x, na.rm = TRUE)
+       } else if(class(x) == "factor") {table(x)
+      }
+  })
+  predicted_means <- sapply(mydata1,function(x) {
+    if(class(x) == "numeric" | class(x) == "integer") {mean(x, na.rm = TRUE)
+    } else if(class(x) == "factor") {table(x)
+    }
+  })
+  
+  actual_medians <- sapply(mydata,function(x) {
+    if(class(x) == "numeric" | class(x) == "integer") {median(x, na.rm = TRUE)
+    } else if(class(x) == "factor") {table(x)
+    }
+  })
+  predicted_medians <- sapply(mydata1,function(x) {
+    if(class(x) == "numeric" | class(x) == "integer") {median(x, na.rm = TRUE)
+    } else if(class(x) == "factor") {table(x)
+    }
+  })
+  
+  imputated_values <- cbind(actual_means,predicted_means, actual_medians,predicted_medians)
+  imputated_values <- as.data.frame(imputated_values)
+  
+ # write.table(as.data.frame(imputated_values), file = "imputated_value_compare.csv", quote=F,sep=",",row.names=T)
  
+  mean(mydata$dutchscore,na.rm = T)
+  #xyplot(modeldata2.mids,outcome ~ Famhist + PersHist + factor(TendXan) + factor(CornArcus) +  factor(LDL_level),pch=18,cex=1)
+  dev.copy(png,paste0(figfilepath,'imputation_checks.png'))
+  print(densityplot(mydata1.mids)) #The density of the imputed data for each imputed dataset is showed in magenta while the density of the observed data is showed in blue.
+  dev.off()
+   # What we would like to see is that the shape of the magenta points (imputed) matches the shape of the blue ones (observed).
+  dev.copy(png,paste0(figfilepath,'imputation_checks2.png'))
+  print(stripplot(mydata1.mids, pch = 20, cex = 1.2)) # function that shows the distributions of the variables as individual points
+   dev.off()
+}
+  
 
 for (i in 1:nvari) {
-  
-  mydata1 <- subset(mydata, mydata[i] != "Unknown")
-  mydata1 <- subset(mydata1, mydata1[i] != "")
-  mydata1 <- subset(mydata1, mydata1[i] != "UNKNOWN" & mydata1$outcome != "")
-  
-  mydata1 <- subset(mydata1, !is.na(mydata1[i]))
-  #mydata %>% 
-  #  subset(mydata[i] != "Unknown")  %>% subset(mydata[i] != "") %>% subset(mydata[i] != "UNKNOWN") 
-  #%>% subset(!is.na(mydata[i]))
-#  subset(mydata[i] != "" | mydata[i] != "UNKNOWN" & mydata$outcome != "" | !is.na(mydata[i])
-
-  # mydata1 <- subset(mydata1,  mydata1$outcome == "")
+ 
+  if (imputation== "F"){ 
+    mydata1 <- subset(mydata, mydata[i] != "Unknown")
+    mydata1 <- subset(mydata1, mydata1[i] != "")
+    mydata1 <- subset(mydata1, mydata1[i] != "UNKNOWN" & mydata1$outcome != "")
+  }
+    
   vari = mydata1[,i]
   vari_name = names(mydata1[i])
   
   if (vari_name == "NoRels50.risk" | vari_name == "NoRels25.risk" |
-      vari_name == "results" | vari_name == "outcome" | vari_name == "prob" ) next 
+      vari_name == "results" | vari_name == "gamlass_centile" | 
+      vari_name == "outcome" | vari_name == "prob" ) next 
   
   nrow(mydata1)
   
@@ -360,15 +268,12 @@ for (i in 1:nvari) {
  
   ### log transform age ###
   # only for coninuous variables
-  if (class(vari) != "factor"){
-    m3 <- univ_regression(log(vari),vari_name, mydata1)
-  
-   } else {
+  if (class(vari) != "factor" ){
+    m3 <- m2
+    if (min(is.na(vari)) != 0 | min(is.na(vari)) > 0)   m3 <- univ_regression(log(vari),vari_name, mydata1)
+  } else {m3 <- m2}
    
-   m3 <- m2
 
-   }
-   
   # compare models
   
   modelinfo <- rbind.data.frame(m1$o1a,m2$o1a,m3$o1a)
