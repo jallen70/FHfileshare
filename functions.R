@@ -110,8 +110,8 @@ write_output <- function(x, vari_name, filename, i){
   col <- F
   if (i == 1) col <- T
   
-  write.table(paste0(vari_name), file=filename, sep = ",", row.names = F, col.names=col, append=T)
-  write.table(x, file=filename, sep = ",", row.names = F, col.names=col, append=T)
+  write.table(paste0(vari_name), file=filename, sep = ",", row.names = F, col.names=F, append=T)
+  write.table(x, file=filename, sep = ",", row.names = F, col.names=F, append=T)
 }
 
 remove_missing <- function(data, colname){
@@ -158,6 +158,8 @@ replace_data <- function(data){
   
   return(data)
 }
+
+
 
 
 
