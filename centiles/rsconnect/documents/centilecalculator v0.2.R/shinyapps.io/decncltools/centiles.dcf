@@ -1,9 +1,11 @@
 name: centiles
+title:
 account: decncltools
 server: shinyapps.io
 appId: 162225
-bundleId: 775975
+bundleId: 826721
 url: https://decncltools.shinyapps.io/centiles/
-when: 1491287748.14061
+when: 1494683855.17137
 asMultiple: FALSE
 asStatic: FALSE
+ignoredFiles: centilecalculator_datainput.R|data/final_full_fhspreadsheet_resolved2ndOct.csv|data/final_full_fhspreadsheet_w_snps.csv|data/missingphenodata.xlsx|data/mypatientsdata_wsnps.csv|data/mypatientsdata.csv|data/mypatientsdatawsnps.csv
