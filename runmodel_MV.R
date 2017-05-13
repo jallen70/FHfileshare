@@ -4,8 +4,8 @@ rm(list = ls())
 
 #path to the working directory
 
-wd <- "Z:/DEC methods/tools - R/Working_project_folders/NCL_DEC0002 Familial hypercholesterolaemia/Current2016-2017/"
-#wd <- "/Users/JoyA/Documents/DEC WORK/FH/Current2016-2017"
+#wd <- "Z:/DEC methods/tools - R/Working_project_folders/NCL_DEC0002 Familial hypercholesterolaemia/Current2016-2017/"
+wd <- "/Users/JoyA/Documents/DEC WORK/FH/Current2016-2017"
 setwd(wd)
 
 #load in packages required
@@ -27,8 +27,8 @@ source("functions/univ_regression.R")
 #load script to read in data
   dataset = "ahsn" # ahsn or full if complete set
   SNPs = "F" # SNP analysis or not?
-  save_plots  = "T"  #overwrite saved plots?
-  save_table = "T" # overwrite saved demographic tables?
+  save_plots  = "F"  #overwrite saved plots?
+  save_table = "F" # overwrite saved demographic tables?
   univariate = "F" # change to false if only want to run multivariate analysis
   imputation = "F" # exclude data which is missing or use imputation techniques?
   
@@ -497,18 +497,100 @@ o1a=cbind(deviance(glm.out),aic[2],auroc[2], auroc[1], auroc[3])#odds ratio and 
 dutchdata <- cbind.data.frame(mydata$dutchscore, mydata$A_max, mydata$B_max, mydata$C_TendXan, mydata$C_CornArcus, mydata$C_max,  mydata$D_max, mydata$LDL, mydata$gamlass_centile, mydata$outcome)
 colnames(dutchdata) <- c("dutchscore", "A_max", "B_max", "C_TendXan", "C_CornArcus", "C_max", "D_max", "LDL", "gamlass_centile", "outcome")
 
-dutchdata$nonhdlcentile[dutchdata$gamlass_centile == "<75"] <- "1"
-dutchdata$nonhdlcentile[dutchdata$gamlass_centile == "75-80"] <- "2"
-dutchdata$nonhdlcentile[dutchdata$gamlass_centile == "80-90"] <- "3"
-dutchdata$nonhdlcentile[dutchdata$gamlass_centile == "90-95"] <- "4"
-dutchdata$nonhdlcentile[dutchdata$gamlass_centile == "95-97.5"] <- "5"
-dutchdata$nonhdlcentile[dutchdata$gamlass_centile == "97.5-99"] <- "6"
-dutchdata$nonhdlcentile[dutchdata$gamlass_centile == "99-99.5"] <- "7"
-dutchdata$nonhdlcentile[dutchdata$gamlass_centile == ">99.5"] <- "8"
+dutchdata$nonhdlcentile <- 0
+dutchdata$nonhdlcentile <- as.numeric(dutchdata$nonhdlcentile)
+dutchdata$nonhdlcentile[dutchdata$gamlass_centile == "<75"] <- 1
+dutchdata$nonhdlcentile[dutchdata$gamlass_centile == "75-80"] <- 2
+dutchdata$nonhdlcentile[dutchdata$gamlass_centile == "80-90"] <- 3
+dutchdata$nonhdlcentile[dutchdata$gamlass_centile == "90-95"] <- 4
+dutchdata$nonhdlcentile[dutchdata$gamlass_centile == "95-97.5"] <- 5
+dutchdata$nonhdlcentile[dutchdata$gamlass_centile == "97.5-99"] <- 7
+dutchdata$nonhdlcentile[dutchdata$gamlass_centile == "99-99.5"] <- 8
+dutchdata$nonhdlcentile[dutchdata$gamlass_centile == ">99.5"] <- 10
 
 
-dutchdata$dutchtest <- dutchdata$A_max + dutchdata$B_max + dutchdata$C_max + dutchdata$D_max
+dutchdata$dutchscore2 <- dutchdata$A_max + dutchdata$B_max + dutchdata$C_max + dutchdata$D_max
+dutchdata$dutchnonhdl <- dutchdata$A_max + dutchdata$B_max + dutchdata$C_max + dutchdata$nonhdlcentile
 
+# subset the data to those which have datatest present
+dutchdata2 <- subset(dutchdata, dutchdata$dutchscore != 0)
+nrow(dutchdata2)
+dutchdata2_test <- subset(dutchdata, dutchdata$dutchnonhdl != 0)
+nrow(dutchdata2_test)
+
+# those with dutch score above 6 will automatically be referred for genetic testing
+max(dutchdata$dutchscore, na.rm = T)
+cutoff <- seq(0,16, by =1)
+
+length(which(dutchdata %>% dutchscore >=6))
+# calculate sens, spec for every cut off.  
+total_study <- total_study %>%  dplyr::rowwise() %>% 
+  dplyr::mutate(age = age_calc(Dob, enddate = Sys.Date(), units = "years"))
+
+cutoff <- as.data.frame(cutoff)
+cutoff <- cutoff %>% dplyr:: rowwise() %>% 
+  dplyr::mutate(num_gt = nrow(subset.data.frame(dutchdata2, dutchdata2$dutchscore2 >= cutoff, 
+             num_lt = nrow(subset.data.frame(dutchdata2, dutchdata2$dutchscore2 < cutoff))))
+
+cutoff <- cutoff %>% dplyr:: rowwise() %>% 
+  dplyr::mutate(num_lt = nrow(subset.data.frame(dutchdata2, dutchdata2$dutchscore2 < cutoff)))
+
+
+dutchlt6 <- subset.data.frame(dutchdata2, dutchdata2$dutchscore2 < cutoff)
+
+dutch6_MD <- subset.data.frame(dutchdata2, dutchdata2$dutchscore2 >= cutoff & dutchdata2$outcome == "MD")
+dutchlt6_NMD <- subset.data.frame(dutchdata2, dutchdata2$dutchscore2 < cutoff & dutchdata2$outcome == "NMD")
+
+sens <- SnSp(nrow(dutch6_MD),nrow(dutch6)- nrow(dutch6_MD))
+spec <- SnSp(nrow(dutchlt6_NMD),nrow(dutchlt6)- nrow(dutchlt6_NMD))
+
+
+dutchtest6 <- subset.data.frame(dutchdata2_test, dutchdata2_test$dutchscore2 >= cutoff)
+dutchlttest6 <- subset.data.frame(dutchdata2_test, dutchdata2_test$dutchscore2 < cutoff)
+
+dutchtest6_MD <- subset.data.frame(dutchdata2_test, dutchdata2_test$dutchscore2 >= cutoff & dutchdata2_test$outcome == "MD")
+dutchlttest6_NMD <- subset.data.frame(dutchdata2_test, dutchdata2_test$dutchscore2 < cutoff & dutchdata2_test$outcome == "NMD")
+
+dutchlttest6_MD <- subset.data.frame(dutchdata2_test, dutchdata2_test$dutchscore2 < cutoff & dutchdata2_test$outcome == "MD")
+
+sens_test <- SnSp(nrow(dutchtest6_MD),nrow(dutchtest6)- nrow(dutchtest6_MD))
+spec_test <- SnSp(nrow(dutchlttest6_NMD),nrow(dutchlttest6)- nrow(dutchlttest6_NMD))
+
+
+# change the cut off - increase it.
+p1 <- ggplot(dutchdata2_test, aes(outcome, dutchscore2))
+p1 <- p1 + geom_boxplot(aes(fill = outcome)) +  labs(x = "Mutation detected", y = "DLCNS", size = 4) + 
+  theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=14,face="bold"))
+p1
+
+#replace LDL in dutch score with nonHDL centile
+dutchtest6 <- subset.data.frame(dutchdata2_test, dutchdata2_test$dutchnonhdl >= 10)
+nrow(dutchtest6)
+dutchtest6_MD2 <- subset.data.frame(dutchdata2_test, dutchdata2_test$dutchnonhdl >= 10 & dutchdata2_test$outcome == "MD")
+nrow(dutchtest6_MD2)
+nrow(dutchtest6) - nrow(dutchtest6_MD2)
+
+dutchlttest6 <- subset.data.frame(dutchdata2_test, dutchdata2_test$dutchnonhdl < 10)
+nrow(dutchlttest6)
+dutchlttest6_NMD2 <- subset.data.frame(dutchdata2_test, dutchdata2_test$dutchnonhdl < 10 & dutchdata2_test$outcome == "NMD")
+nrow(dutchlttest6_MD2)
+
+sens_test2 <- SnSp(nrow(dutchtest6_MD2),nrow(dutchtest6)- nrow(dutchtest6_MD2))
+spec_test2 <- SnSp(nrow(dutchlttest6_NMD2),nrow(dutchlttest6)- nrow(dutchlttest6_NMD2))
+
+
+# change the cut off - increase it.
+p2 <- ggplot(dutchdata2_test, aes(outcome, dutchnonhdl))
+p2 <- p2 + geom_boxplot(aes(fill = outcome)) +  labs(x = "Mutation detected", y = "DLCNS with nonhdlcentile", size = 4) + 
+  theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=14,face="bold"))
+p2
+
+
+# replace with centile and see how many would be picked up... 
+# also look at MDT decisions
+# also SNP data
 
 # #######################################################################################################################
 # 
