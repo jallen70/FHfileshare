@@ -15,10 +15,10 @@ TCcw <-read.csv("femalecentiles_TC.csv")
 gamlass_centiles <- TRUE
 
 # wd <- "H:/Jallens_homearea_DEC/Calculators/R/Centile calculator/"
-#wd <- "~/Documents/DEC WORK/FH/centiles"
+#wd <- "~/Documents/DEC WORK/FH/Current2016-2017/FHfileshare/centiles"
 
-wd <- "Z:/DEC methods/tools - R/Working_project_folders/NCL_DEC0002 Familial hypercholesterolaemia/Current2016-2017/FHfileshare/centiles"
-setwd(wd)
+#wd <- "Z:/DEC methods/tools - R/Working_project_folders/NCL_DEC0002 Familial hypercholesterolaemia/Current2016-2017/FHfileshare/centiles"
+#setwd(wd)
 
 
 #setwd(wd)
@@ -119,10 +119,10 @@ centile_script <- function(age, sex, chol, valuechol){
 
 ui<-fluidPage(
   
- tags$style(type="text/css",
-             ".shiny-output-error { visibility: hidden; }",
-             ".shiny-output-error:before { visibility: hidden; }"
-  ),
+ #tags$style(type="text/css",
+#             ".shiny-output-error { visibility: hidden; }",
+#             ".shiny-output-error:before { visibility: hidden; }"
+#  ),
   
   titlePanel(h4("Total and nonHDL percentile calculator")),
   
