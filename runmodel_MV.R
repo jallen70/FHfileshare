@@ -529,12 +529,40 @@ total_study <- total_study %>%  dplyr::rowwise() %>%
 
 cutoff <- as.data.frame(cutoff)
 cutoff <- cutoff %>% dplyr:: rowwise() %>% 
-  dplyr::mutate(num_gt = nrow(subset.data.frame(dutchdata2, dutchdata2$dutchscore2 >= cutoff, 
-             num_lt = nrow(subset.data.frame(dutchdata2, dutchdata2$dutchscore2 < cutoff))))
+  dplyr::mutate(num_gt = nrow(subset.data.frame(dutchdata2_test, dutchdata2_test$dutchscore2 >= cutoff)), 
+             num_lt = nrow(subset.data.frame(dutchdata2_test, dutchdata2_test$dutchscore2 < cutoff)),
+             num_gt_md = nrow(subset.data.frame(dutchdata2_test, dutchdata2_test$dutchscore2 >= cutoff & dutchdata2_test$outcome == "MD")), 
+             num_lt_md = nrow(subset.data.frame(dutchdata2_test, dutchdata2_test$dutchscore2 < cutoff& dutchdata2_test$outcome == "MD")),
+             num_gt_nmd = nrow(subset.data.frame(dutchdata2_test, dutchdata2_test$dutchscore2 >= cutoff & dutchdata2_test$outcome == "NMD")), 
+             num_lt_nmd = nrow(subset.data.frame(dutchdata2_test, dutchdata2_test$dutchscore2 < cutoff& dutchdata2_test$outcome == "NMD")),
+             num_gt2 = nrow(subset.data.frame(dutchdata2_test, dutchdata2_test$dutchnonhdl >= cutoff)), 
+             num_lt2 = nrow(subset.data.frame(dutchdata2_test, dutchdata2_test$dutchnonhdl  < cutoff)),
+             num_gt_md2 = nrow(subset.data.frame(dutchdata2_test, dutchdata2_test$dutchnonhdl  >= cutoff & dutchdata2_test$outcome == "MD")), 
+             num_lt_md2 = nrow(subset.data.frame(dutchdata2_test, dutchdata2_test$dutchnonhdl < cutoff& dutchdata2_test$outcome == "MD")),
+             num_gt_nmd2 = nrow(subset.data.frame(dutchdata2_test, dutchdata2_test$dutchnonhdl  >= cutoff & dutchdata2_test$outcome == "NMD")), 
+             num_lt_nmd2 = nrow(subset.data.frame(dutchdata2_test, dutchdata2_test$dutchnonhdl  < cutoff& dutchdata2_test$outcome == "NMD")))
 
 cutoff <- cutoff %>% dplyr:: rowwise() %>% 
-  dplyr::mutate(num_lt = nrow(subset.data.frame(dutchdata2, dutchdata2$dutchscore2 < cutoff)))
+  dplyr::mutate(sens = num_gt_md/(num_gt_md+num_lt_md), spec = 1 - num_lt_nmd/(num_gt_nmd+num_lt_nmd),
+                sens2 = num_gt_md2/(num_gt_md2+num_lt_md2), spec2 = 1 - num_lt_nmd2/(num_gt_nmd2+num_lt_nmd2))
 
+
+p <- ggplot(cutoff, aes(cutoff,sens, colour = "blue"))
+p <- p + geom_line(color="blue") 
+p <- p + geom_line(aes(cutoff,sens2, colour = "dashed"), colour = "blue", linetype = "dashed")
+p <- p + geom_line(aes(cutoff,spec, colour = "red"), colour = "red")
+p <- p + geom_line(aes(cutoff,spec2, colour = "dashed2"), colour = "red", linetype = "dashed") + 
+  #+ scale_color_manual(values = c("Sensitivity" = "blue", 
+  #                                #"DLCN with nonhdl" = "dashed",
+  #                                "Specificity"  = "red"#,
+  #                                #"DLCN with nonhdl" = "dashed2"
+  #                                )) + 
+labs(x = "Cut off value", y = "Sensitivity/ Specificity of referral", size = 4) + 
+  theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=14,face="bold")) 
+p
+
+############## we are here###########
 
 dutchlt6 <- subset.data.frame(dutchdata2, dutchdata2$dutchscore2 < cutoff)
 
