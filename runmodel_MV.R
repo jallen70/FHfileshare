@@ -27,8 +27,8 @@ source("functions/univ_regression.R")
 #load script to read in data
   dataset = "ahsn" # ahsn or full if complete set
   SNPs = "F" # SNP analysis or not?
-  save_plots  = "F"  #overwrite saved plots?
-  save_table = "F" # overwrite saved demographic tables?
+  save_plots  = "T"  #overwrite saved plots?
+  save_table = "T" # overwrite saved demographic tables?
   univariate = "F" # change to false if only want to run multivariate analysis
   imputation = "F" # exclude data which is missing or use imputation techniques?
   
@@ -123,7 +123,9 @@ missmap(mydata, main = "Missing values vs observed")
       demographic_plots(mydata, figfilepath)
     }
     
+    # once demographcs recorded, remove participant where full genetic testing was not carried out
     
+    mydata <- subset(mydata, mydata$results != "Seq NMD and no MiSeq")
     
     now <- format(Sys.time(), "%b%d%H%M%S")
     filename <- paste0(tabfilepath,now,"demographics.csv")
@@ -235,6 +237,8 @@ missmap(mydata, main = "Missing values vs observed")
     
     # to avoid a loop we should write a function for this.
     
+
+    
     
     for (i in 1:nvari) {
       
@@ -248,7 +252,7 @@ missmap(mydata, main = "Missing values vs observed")
       vari_name = names(mydata1[i])
       
       if (vari_name == "NoRels50.risk" | vari_name == "NoRels25.risk" |
-          vari_name == "results" | vari_name == "gamlass_centile" | 
+          vari_name == "results" | #vari_name == "gamlass_centile" | 
           vari_name == "outcome" | vari_name == "prob" ) next 
       
       nrow(mydata1)
