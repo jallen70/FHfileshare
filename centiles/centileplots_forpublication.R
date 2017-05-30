@@ -1,5 +1,8 @@
 # centile plots for publication
-wd <- "~/Documents/DEC WORK/FH/Current2016-2017/FHfileshare/centiles"
+
+wd <- "Z:/DEC methods/tools - R/Working_project_folders/NCL_DEC0002 Familial hypercholesterolaemia/Current2016-2017/FHfileshare/centiles"
+#wd <- "~/Documents/DEC WORK/FH/Current2016-2017/FHfileshare/centiles"
+
 setwd(wd)
 gcm <- read.csv("gamlassmalecentiles.csv")
 gcw <-read.csv("gamlassfemalecentiles.csv")
@@ -25,6 +28,9 @@ distm <- distm + geom_line(colour = "red", na.rm = TRUE)   + geom_line(colour = 
   annotate("text", label = "Current cut-off", size = 4, x = 10, y = 6.1) + 
   ggtitle("Male non-HDL-C percentile plots")
 distm
+
+
+
 
 gcw <- as.data.frame(gcw)
 gcw <- gcw[with(gcw,order(age)), ]
