@@ -4,8 +4,8 @@ rm(list = ls())
 
 #path to the working directory
 
-wd <- "Z:/DEC methods/tools - R/Working_project_folders/NCL_DEC0002 Familial hypercholesterolaemia/Current2016-2017/"
-#wd <- "/Users/JoyA/Documents/DEC WORK/FH/Current2016-2017"
+#wd <- "Z:/DEC methods/tools - R/Working_project_folders/NCL_DEC0002 Familial hypercholesterolaemia/Current2016-2017/"
+wd <- "/Users/JoyA/Documents/DEC WORK/FH/Current2016-2017"
 setwd(wd)
 
 #load in packages required
@@ -23,8 +23,6 @@ library("arm")
 #load functions script
 source("functions/functions.R")
 source("functions/univ_regression.R")
-source("functions/multiv_regression.R")
-source("functions/genrefine.R")
 
 #load script to read in data
   dataset = "ahsn" # ahsn or full if complete set
@@ -32,9 +30,8 @@ source("functions/genrefine.R")
   save_plots  = "T"  #overwrite saved plots?
   save_table = "T" # overwrite saved demographic tables?
   univariate = "F" # change to false if only want to run multivariate analysis
-  imputation = "T" # exclude data which is missing or use imputation techniques?
-  individual_roc = "T" # for multivariate analysis do we want to print individual roc curves for each model?
-  comb_roc = "T" # for multivariate analysis do we want to print combined roc curves for models?
+  imputation = "F" # exclude data which is missing or use imputation techniques?
+  
 
   source("functions/read_clean_update.R")
   readingfiles(dataset, SNPs)
@@ -45,6 +42,8 @@ source("functions/genrefine.R")
 
 # FOR CHECKS #
   sapply(mydata,class)
+
+
 
 ##### median nonHDL levels from HSE data
 
@@ -111,23 +110,11 @@ missmap(mydata, main = "Missing values vs observed")
 
 
   if(dataset == "ahsn"){
-    
     figfilepath = "test/ahsn/"
     tabfilepath = "test/ahsn/"
-    if(imputation){
-      figfilepath = "test/ahsn_impute/"
-      tabfilepath = "test/ahsn_impute/"
-      
-    }
-      
     } else {
     figfilepath = "figures/full/"
     tabfilepath = "output/full/"
-    if(imputation){
-      figfilepath = "test/full_impute/"
-      tabfilepath = "test/full_impute/"
-      
-    }
   }
     
     ##exploratory analysis: plots
@@ -141,7 +128,6 @@ missmap(mydata, main = "Missing values vs observed")
     mydata <- subset(mydata, mydata$results != "Seq NMD and no MiSeq")
     
     now <- format(Sys.time(), "%b%d%H%M%S")
-    assign(now, now, envir = .GlobalEnv)
     filename <- paste0(tabfilepath,now,"demographics.csv")
     
     #how many variables do we have?
@@ -393,28 +379,122 @@ missmap(mydata, main = "Missing values vs observed")
     end    
   }
     
-    ##### MULTIVARIATE REGRESSION #####
     
-    ##### check for normality with chol values
-    if (imputation == "F"){
-      mydata1$dutchscore <- replace_data(mydata1$dutchscore)
-      mydata1$TotalC <- replace_data(mydata1$TotalC)
-      mydata1$LDLC <- replace_data(mydata1$LDLC)
-      mydata1$nonhdl <- replace_data(mydata1$nonhdl)
-      mydata1$Trigly <- replace_data(mydata1$Trigly)
-      mydata1$MoM <- replace_data(mydata1$MoM)
-    }
-
+    #variable gamlass_centile suffers from perfect separation
+    # therefore use bayesian logistic regression for this parameter
     
-      multiv_regression(figfilepath,individual_roc,comb_roc,mydata1)
+    m <- bayesglm(outcome~gamlass_centile, family = "binomial", data = mydata1)
+    summary(m)#
+    tidy(m)
+    
+    levs <- nlevels(mydata1$gamlass_centile)
+    
+    aic=extractAIC(m)
+    mydata1 <- mydata1 %>% mutate(prob = predict(m,type=c("response")))
+    mydata1$prob=predict(m,type=c("response"))
+    predRisk <- predRisk(m)
+    g <- roc(outcome~prob, data = mydata1, levels=c("NMD", "MD"), ci = TRUE)
+    auroc=ci.auc(g)
+    g0 <- plot.roc(outcome~ prob, data= mydata1, percent=T, ci=TRUE, levels=c("NMD", "MD"), main = (paste0(vari_name)))
+    g0
+    o1a=cbind(deviance(m),aic[2],auroc[2], auroc[1], auroc[3])
+    MR=cbind(coef(m),confint(m), exp(cbind(OR = coef(m),confint(m))), coef(summary(m))[,4])#odds ratio and CI
+    # m1rows = cbind(mdf, o1a)
+    
+    
+##### check for normality with chol values
+if (imputation == "F"){
+ mydata1$dutchscore <- replace_data(mydata1$dutchscore)
+ mydata1$TotalC <- replace_data(mydata1$TotalC)
+ mydata1$LDLC <- replace_data(mydata1$LDLC)
+ mydata1$nonhdl <- replace_data(mydata1$nonhdl)
+ mydata1$Trigly <- replace_data(mydata1$Trigly)
+ mydata1$MoM <- replace_data(mydata1$MoM)
+}
 
-      # genetic referral refinments
-      
-      genrefine(figfilepath,mydata)
+################ Dutch score alone ################
+
+glm.out <- glm(outcome ~ dutchscore, family=binomial, data=mydata1)
+summary(glm.out)
+aic=extractAIC(glm.out)
+modeldata <- mydata1 %>% mutate(prob = predict(glm.out,type=c("response")))
+anova(glm.out, test="Chisq")
+predRisk <- predRisk(glm.out)
+
+g0 <- plot.roc(modeldata$outcome, modeldata$prob, percent=TRUE, ci=TRUE, levels=c("NMD", "MD"), main ="Dutch Score alone" )
+g0
+auroc=ci.auc(g0)
+o1a=cbind(deviance(glm.out),aic[2],auroc[2], auroc[1], auroc[3])#odds ratio and CI
+
+
+#### components of dutchscore - how many complete datasets do we have?
+# the compendents are:
+# A_max # family history
+# B_max # personal history
+# C_TendXan
+# C_CornArcus
+# LDLC level
+
+# missing too many values for Tend - 35 and Corn - 76?  
+# do fit first without these variables and then try to impute.
+
+
+glm.out <- glm(outcome ~ A_max + B_max + factor(C_TendXan) + factor(C_CornArcus) +  factor(LDL), family=binomial, data=mydata1)
+summary(glm.out)
+aic=extractAIC(glm.out)
+modeldata2 <- mydata1 %>% mutate(prob = predict(glm.out,type=c("response")))
+anova(glm.out, test="Chisq")
+predRisk <- predRisk(glm.out)
+
+g0 <- plot.roc(modeldata2$outcome, modeldata2$prob, percent=TRUE, ci=TRUE, levels=c("NMD", "MD"), main ="componements of DS with LDL levels" )
+g0
+auroc=ci.auc(g0)
+o1a=cbind(deviance(glm.out),aic[2],auroc[2], auroc[1], auroc[3])#odds ratio and CI
+
+#####################
+### use LDLC values rather than levels
+glm.out <- glm(outcome ~ A_max + B_max + factor(C_TendXan) + factor(C_CornArcus) +  LDLC, family=binomial, data=mydata1)
+summary(glm.out)
+aic=extractAIC(glm.out)
+modeldata2 <- mydata1 %>% mutate(prob = predict(glm.out,type=c("response")))
+anova(glm.out, test="Chisq")
+predRisk <- predRisk(glm.out)
+
+g0 <- plot.roc(modeldata2$outcome, modeldata2$prob, percent=TRUE, ci=TRUE, levels=c("NMD", "MD"), main ="componements of DS with LDL levels" )
+g0
+auroc=ci.auc(g0)
+o1a=cbind(deviance(glm.out),aic[2],auroc[2], auroc[1], auroc[3])#odds ratio and CI
+
+### use gamlass centiles 
+glm.out <- glm(outcome ~ A_max + B_max + factor(C_TendXan) + factor(C_CornArcus) +  factor(gamlass_centile), family=binomial, data=mydata1)
+summary(glm.out)
+aic=extractAIC(glm.out)
+modeldata2 <- mydata1 %>% mutate(prob = predict(glm.out,type=c("response")))
+anova(glm.out, test="Chisq")
+predRisk <- predRisk(glm.out)
+
+g0 <- plot.roc(modeldata2$outcome, modeldata2$prob, percent=TRUE, ci=TRUE, levels=c("NMD", "MD"), main ="componements of DS with LDL levels" )
+g0
+auroc=ci.auc(g0)
+o1a=cbind(deviance(glm.out),aic[2],auroc[2], auroc[1], auroc[3])#odds ratio and CI
+
+#### try MoM rather than centiles
+
+glm.out <- glm(outcome ~ A_max + B_max + factor(C_TendXan) + factor(C_CornArcus) +  MoM, family=binomial, data=mydata1)
+summary(glm.out)
+aic=extractAIC(glm.out)
+modeldata2 <- mydata1 %>% mutate(prob = predict(glm.out,type=c("response")))
+anova(glm.out, test="Chisq")
+predRisk <- predRisk(glm.out)
+
+g0 <- plot.roc(modeldata2$outcome, modeldata2$prob, percent=TRUE, ci=TRUE, levels=c("NMD", "MD"), main ="componements of DS with LDL levels" )
+g0
+auroc=ci.auc(g0)
+o1a=cbind(deviance(glm.out),aic[2],auroc[2], auroc[1], auroc[3])#odds ratio and CI
 
 ### not big enough differences in AUROC with these therefore let's move to 'what if' scenarios.  
 
-   
+
 
 #dutchscore data set
 # use original data set - with missing data
