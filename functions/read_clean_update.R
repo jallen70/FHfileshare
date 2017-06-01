@@ -3,7 +3,7 @@
 
 readingfiles <- function(dataset, SNPs){
 
-#
+# test
 # 4th Jan - n= 414 for full dataset, n= 258 for ahsn 
   if(SNPs){
     fhfull = read.csv("Raw_data/final_full_fhspreadsheet_w_snps_240417.csv", nrow = 414, stringsAsFactors=F)   
