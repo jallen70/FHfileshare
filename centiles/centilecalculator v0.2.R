@@ -15,7 +15,7 @@ TCcw <-read.csv("femalecentiles_TC.csv")
 gamlass_centiles <- TRUE
 
 # wd <- "H:/Jallens_homearea_DEC/Calculators/R/Centile calculator/"
-#wd <- "~/Documents/DEC WORK/FH/Current2016-2017/FHfileshare/centiles"
+wd <- "~/Documents/DEC WORK/FH/Current2016-2017/FHfileshare/centiles"
 
 #wd <- "Z:/DEC methods/tools - R/Working_project_folders/NCL_DEC0002 Familial hypercholesterolaemia/Current2016-2017/FHfileshare/centiles"
 #setwd(wd)
