@@ -1,0 +1,11 @@
+name: nonhdlandtccentilecalculation
+title: nonHDLandTCcentilecalculation
+account: decncltools
+server: shinyapps.io
+appId: 185413
+bundleId: 848870
+url: https://decncltools.shinyapps.io/nonHDLandTCcentilecalculation/
+when: 1496324633.87972
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: centilecalculator v0.2.R|centilecalculator_datainput.R|centilecurves_ageintervals.R|centilecurves.R|centileestimations age related.pdf|centileplots_forpublication.R|demistifying LMS methodsfor helath professionals.pdf|Female_ageCholtables.csv|Female_ageCholtables.xlsx|femalenonHDLtables.csv|femaleTCtables.csv|Male_ageCholtables.csv|Male_ageCholtables.xlsx|malenonHDLtables.csv|maleTCtables.csv|patientspecificcentiles.csv|data/final_full_fhspreadsheet_resolved2ndOct.csv|data/final_full_fhspreadsheet_w_snps.csv|data/missingphenodata.xlsx|data/mypatientsdata_short.csv|data/mypatientsdata_wsnps.csv|data/mypatientsdata.csv|data/mypatientsdatawsnps.csv
