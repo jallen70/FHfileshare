@@ -345,6 +345,10 @@ total_study_pos = subset(total_study, (total_study$Comment...Further.info != "NM
 #write.csv(snp_data, "output/mypatientsdatawsnps.csv")
 
 
+#snp_data <- cbind.data.frame(total_study$Sex, total_study$age, total_study$nonhdl, total_study$SNP.score)
+colnames(mypatientsdata) <- c("Sex", "age", "nonhdl", "totchol")
+write.csv(snp_data, "output/mypatientsdata.csv")
+
 ########################################################################
 assign("total_study",total_study,envir = .GlobalEnv)
 assign("total_study_pos", total_study_pos, envir=.GlobalEnv)
