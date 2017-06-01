@@ -91,19 +91,19 @@ total_study$C_max <- as.integer(total_study$C_max)
 total_study$D_max <- as.integer(total_study$D_max)
 
 ## data entry problems with A_max, B_max and C_max.  Need to re-compute these
-total_study$A_max <- 0
+total_study$A_max <- NA
 total_study$A_max[total_study$A_Famhist_1 == "YES" | total_study$A_Famhist_2 == "YES"] <- 1
 total_study$A_max[total_study$A_Famhist_3 == "YES" | total_study$A_Famhist_4 == "YES"] <- 2
 
-total_study$B_max <- 0
+total_study$B_max <- NA
 total_study$B_max[total_study$B_Pershist_2 == "YES" ] <- 1
 total_study$B_max[total_study$B_Pershist_1 == "YES"] <- 2
 
-total_study$C_max <- 0
+total_study$C_max <- NA
 total_study$C_max[total_study$C_CornArcus == "YES" ] <- 4
 total_study$C_max[total_study$C_TendXan == "YES"] <- 6
 
-total_study$D_max <- 0
+total_study$D_max <- NA
 total_study$D_max[total_study$D_LDL_4 == "YES" ] <- 1
 total_study$D_max[total_study$D_LDL_3 == "YES"] <- 3
 total_study$D_max[total_study$D_LDL_2 == "YES" ] <- 5
@@ -301,8 +301,7 @@ total_study$gamlass_centile <- factor(total_study$gamlass_centile,
 ### binary response variable #############################
 total_study$outcome <- ""
 total_study$outcome[total_study$Overall == "Seq MD" | total_study$Overall =="Seq NMD and MiSeq MD"] <- "MD"
-# keep extrat case in for demographics but they will be removed from analysis
-total_study$outcome[total_study$Overall == "Seq NMD and MiSeq NMD" | total_study$Overall == "Seq NMD and no MiSeq"] <- "NMD"
+total_study$outcome[total_study$Overall == "Seq NMD and MiSeq NMD"] <- "NMD"
 
 ################tidy data frame for analysis###############
 if (SNPs){
@@ -344,10 +343,6 @@ total_study_pos = subset(total_study, (total_study$Comment...Further.info != "NM
 #colnames(snp_data) <- c("Sex", "age", "nonhdl", "SNPscore")
 #write.csv(snp_data, "output/mypatientsdatawsnps.csv")
 
-
-#snp_data <- cbind.data.frame(total_study$Sex, total_study$age, total_study$nonhdl, total_study$SNP.score)
-colnames(mypatientsdata) <- c("Sex", "age", "nonhdl", "totchol")
-write.csv(snp_data, "output/mypatientsdata.csv")
 
 ########################################################################
 assign("total_study",total_study,envir = .GlobalEnv)
