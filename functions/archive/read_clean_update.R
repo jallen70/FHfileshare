@@ -6,12 +6,13 @@ readingfiles <- function(dataset, SNPs){
 #
 # 4th Jan - n= 414 for full dataset, n= 258 for ahsn 
   if(SNPs){
-    fhfull = read.csv("Raw_data/final_full_fhspreadsheet_w_snps_100417.csv", nrow = 414, stringsAsFactors=F)   
+    fhfull = read.csv("Raw_data/final_full_fhspreadsheet_w_snps_240417.csv", nrow = 414, stringsAsFactors=F)   
   } else {
     fhfull = read.csv("Raw_data/Update final_full_fhspreadsheet update 100417.csv", nrow = 414, stringsAsFactors=F)  
   }
   
 
+  
 
 total_study_full = fhfull 
 
@@ -24,6 +25,12 @@ total_study = subset(total_study_full,total_study_full$Request. == "FH_original 
 nparticipants = nrow(total_study)
 assign("nparticipants",nparticipants,envir = .GlobalEnv)
 colnames(total_study)
+
+## need to remove erronious 'ME' in SEX data
+
+total_study$Sex[total_study$Sex == "ME"] <- ""
+total_study$Sex[is.na(total_study$Sex)] <- ""
+
 
 ##### BE ABLE TO UNCOMMENT WHEN NEW PHENOTYPIC DATA #### ? 
 #Date of births match?
@@ -79,9 +86,29 @@ total_study$test <- NULL
 total_study$A_NoRels50.risk <- as.integer(total_study$A_NoRels50.risk) # replace unknowns with NA
 total_study$A_NoRels25.risk <- as.integer(total_study$A_NoRels25.risk)
 total_study$A_max <- as.integer(total_study$A_max)
-total_study$A_max <- as.integer(total_study$B_max)
-total_study$A_max <- as.integer(total_study$C_max)
-total_study$A_max <- as.integer(total_study$D_max)
+total_study$B_max <- as.integer(total_study$B_max)
+total_study$C_max <- as.integer(total_study$C_max)
+total_study$D_max <- as.integer(total_study$D_max)
+
+## data entry problems with A_max, B_max and C_max.  Need to re-compute these
+total_study$A_max <- NA
+total_study$A_max[total_study$A_Famhist_1 == "YES" | total_study$A_Famhist_2 == "YES"] <- 1
+total_study$A_max[total_study$A_Famhist_3 == "YES" | total_study$A_Famhist_4 == "YES"] <- 2
+
+total_study$B_max <- NA
+total_study$B_max[total_study$B_Pershist_2 == "YES" ] <- 1
+total_study$B_max[total_study$B_Pershist_1 == "YES"] <- 2
+
+total_study$C_max <- NA
+total_study$C_max[total_study$C_CornArcus == "YES" ] <- 4
+total_study$C_max[total_study$C_TendXan == "YES"] <- 6
+
+total_study$D_max <- NA
+total_study$D_max[total_study$D_LDL_4 == "YES" ] <- 1
+total_study$D_max[total_study$D_LDL_3 == "YES"] <- 3
+total_study$D_max[total_study$D_LDL_2 == "YES" ] <- 5
+total_study$D_max[total_study$D_LDL_1 == "YES"] <- 8
+
 # 
 # remove erroneous "6" value in TenXan column
 colno <- which(sapply(total_study$C_TendXan, function(x) any(x == "6")))
@@ -228,12 +255,7 @@ missing_results = subset(total_study, total_study$Overall == "")
 
 ####### CALCULATE AGE ###########################
 total_study$Dob <- as.Date((total_study$Dob), "%m/%d/%Y")
-total_study$age <- age_calc(total_study$Dob, enddate = Sys.Date(), units = "years")
-
-#total_study_pos = subset(total_study, (total_study$Sequenom.Result != "NOT DONE" &
-#                           total_study$Sequenom.Result != "" & total_study$Sequenom.Result != "NMD") |
-#                           (total_study$MiSeq.Result != "NMD" & total_study$MiSeq.required == "done"))
-
+total_study <- total_study %>%  dplyr::rowwise() %>% dplyr::mutate(age = age_calc(Dob, enddate = Sys.Date(), units = "years"))
 
 total_study$Comment...Further.info[(total_study$Comment...Further.info == "POS Miseq" | 
                                      total_study$Comment...Further.info == "POS MiSeQ"| 
@@ -253,47 +275,56 @@ levels(total_study$Comment...Further.info)
 #calculate nonhdl level
 
 total_study$nonhdl <- total_study$TotalC - total_study$HDLC
-total_study$nonhdl[total_study$nonhdl < 0 ]<- 0
+total_study$nonhdl[total_study$nonhdl < 0 ]<- NA
+total_study$nonhdl <- as.numeric(total_study$nonhdl)
 
 ###### assign nonhdl centile ###############################
-source("functions/centile_conversion_hseintervals.R")
-gamlass_centiles <- convert2gamlass_centiles()
-#total_study$gamlass_centile[total_study$gamlass_centile == "NA"] <- "Unknown" 
+source("functions/functions.R")
+cm <- read.csv("HSE_data/GAMLASS centiles/malecentiles.csv")
+cw <- read.csv("HSE_data/GAMLASS centiles/femalecentiles.csv")
+#as.data.frame(cm)
+cm$X <- NULL
+cw$X <- NULL
+
+assign("cm",cm,envir = .GlobalEnv)
+assign("cw", cw, envir=.GlobalEnv)
+
+total_study <- total_study %>%  dplyr::rowwise() %>% dplyr::mutate(gamlass_centile = convert_glmcentiles(Sex, age, nonhdl))
+
+total_study$gamlass_centile[total_study$gamlass_centile == "NA"] <- "Unknown" 
 total_study$gamlass_centile[total_study$gamlass_centile == ""] <- "Unknown"
 total_study$gamlass_centile <- as.factor(total_study$gamlass_centile)
-
-#print(levels(total_study$gamlass_centile))
-total_study$gamlass_centile[is.na(total_study$gamlass_centile)] <- "Unknown" 
 total_study$gamlass_centile <- factor(total_study$gamlass_centile, 
                                       levels = c("Unknown",  "<75", "75-80", "80-90","90-95","95-97.5", "97.5-99", "99-99.5", ">99.5" ), exclude = NULL)
 ###########################################################
 
 ### binary response variable #############################
+total_study$outcome <- ""
 total_study$outcome[total_study$Overall == "Seq MD" | total_study$Overall =="Seq NMD and MiSeq MD"] <- "MD"
 total_study$outcome[total_study$Overall == "Seq NMD and MiSeq NMD"] <- "NMD"
 
-
-
-################tidy data frame ###############
+################tidy data frame for analysis###############
 if (SNPs){
   mydata = data.frame(total_study$age,total_study$Sex, 
                       total_study$Dutch.score.1,total_study$A_NoRels50.risk, total_study$A_NoRels25.risk,
+                      total_study$A_max, total_study$B_max, total_study$C_max,total_study$D_max,
                       total_study$C_TendXan, total_study$C_CornArcus,
                       total_study$TotalC, total_study$Lipo, total_study$LDLC, total_study$nonhdl, total_study$Trigly,
                       total_study$LDL, total_study$DLCN, total_study$gamlass_centile,total_study$SNP.score, total_study$SNP.decile,
                       total_study$Overall, total_study$outcome)
   
-  colnames(mydata) <- c("age", "Sex", "dutchscore", "NoRels50.risk", "NoRels25.risk",
+  colnames(mydata) <- c("age", "Sex", "dutchscore", "NoRels50.risk", "NoRels25.risk", "A_max", "B_max", "C_max", "D_max",
                         "C_TendXan", "C_CornArcus", "TotalC", "Lipo", "LDLC", "nonhdl", "Trigly",
                         "LDL", "DLCN", "gamlass_centile", "SNPscore", "SNPdecile", "results", "outcome")
 } else {
   mydata = data.frame(total_study$age,total_study$Sex, 
-                      total_study$Dutch.score.1,total_study$A_NoRels50.risk, total_study$A_NoRels25.risk,
+                      total_study$Dutch.score.1,total_study$A_NoRels50.risk, total_study$A_NoRels25.risk, total_study$A_max, total_study$B_max,
+                      total_study$C_max,  total_study$D_max,
                       total_study$C_TendXan, total_study$C_CornArcus,
                       total_study$TotalC, total_study$Lipo, total_study$LDLC, total_study$nonhdl, total_study$Trigly,
                       total_study$LDL, total_study$DLCN,total_study$gamlass_centile, total_study$Overall, total_study$outcome)
   
-  colnames(mydata) <- c("age", "Sex", "dutchscore", "NoRels50.risk", "NoRels25.risk",
+  colnames(mydata) <- c("age", "Sex", "dutchscore", "NoRels50.risk", "NoRels25.risk", "A_max", "B_max", "C_max", "D_max",
                         "C_TendXan", "C_CornArcus", "TotalC", "Lipo", "LDLC", "nonhdl", "Trigly",
                         "LDL", "DLCN", "gamlass_centile", "results", "outcome")
 }
@@ -316,6 +347,6 @@ total_study_pos = subset(total_study, (total_study$Comment...Further.info != "NM
 ########################################################################
 assign("total_study",total_study,envir = .GlobalEnv)
 assign("total_study_pos", total_study_pos, envir=.GlobalEnv)
-assign("mydata",total_study,envir = .GlobalEnv)
+assign("mydata",mydata,envir = .GlobalEnv)
 
 }
