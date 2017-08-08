@@ -11,8 +11,8 @@ rm(list = ls())
 read <- F
 rm_lipids <- T
 
-#wd <- "Z:/DEC methods/tools - R/Working_project_folders/NCL_DEC0002 Familial hypercholesterolaemia/AnalysisAug2016/HSE_data"
-wd <- "~/Documents/DEC WORK/FH/Current2016-2017/HSE_data/"
+wd <- "Z:/DEC methods/tools - R/Working_project_folders/NCL_DEC0002 Familial hypercholesterolaemia/Current2016-2017/HSE_data"
+#wd <- "~/Documents/DEC WORK/FH/Current2016-2017/HSE_data/"
 
 setwd(wd)
 
@@ -101,7 +101,7 @@ hse_women <- subset(hse_nonhdl,hse_nonhdl$sex == "Women")
 # 
 
 #tables for paper
-count_men <-count(hse_men$age)
+count_men <- count(hse_men$age)
 count_women <- count(hse_women$age)
 
 freq <- merge(count_men, count_women, by = "x", all = T)
@@ -154,7 +154,7 @@ pdf(mypath, paper = "a4r", width = 11, height = 8)
 grid.arrange(TCdist_men,nonhdldist_men,TCdist_women,nonhdldist_women, ncol=2)
 dev.off()
 
-TCcentile_men <- ddply(hse_men, .(age_group), function(hse_men.sub) quantile(hse_men.sub$totchol, c(.75,.80,.90, .95, .975, .99, .995)))
+TCcentile_men <- ddply(hse_men, .(age_group), function(hse_men.sub) quantile(hse_men.sub$totchol, c(.75,.80,.90, .95, .975, .99, .995)), n = sum(hse_men.sub))
 nonHDLcentile_men <- ddply(hse_men, .(age_group), function(hse_men.sub) quantile(hse_men.sub$nonhdl, c(.75,.80,.90, .95, .975, .99, .995)))
 
 TCcentile_women <- ddply(hse_women, .(age_group), function(hse_women.sub) quantile(hse_women.sub$totchol, c(.75,.80,.90, .95, .975, .99, .995)))
@@ -165,6 +165,7 @@ nonHDLcentile_all <- bind_rows(nonHDLcentile_men, nonHDLcentile_women)
 
 # check against HSE 2003 data - table 9.3 
 
+  test <- hse_men
   TCtest <- ddply(test, .(age_group), function(test.sub) quantile(test.sub$totchol, c(.10,.90)))
   HSE2003_men <- as.data.frame(TCtest)
   test<- subset(hse_women, hse_women$year == "2003")
