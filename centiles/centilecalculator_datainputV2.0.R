@@ -6,9 +6,9 @@ library(dplyr)
 
 # wd <- "H:/Jallens_homearea_DEC/Calculators/R/Centile calculator/"
 #wd <- "~/Documents/DEC WORK/FH/Current2016-2017/FHfileshare/centiles"
-wd <-  "Z:/DEC methods/tools - R/Working_project_folders/NCL_DEC0002 Familial hypercholesterolaemia/Current2016-2017/FHfileshare/centiles"
+#wd <-  "Z:/DEC methods/tools - R/Working_project_folders/NCL_DEC0002 Familial hypercholesterolaemia/Current2016-2017/FHfileshare/centiles"
 
-setwd(wd)
+#setwd(wd)
 
 cm <- read.csv("malecentiles.csv")
 cw <- read.csv("femalecentiles.csv")
@@ -165,7 +165,7 @@ ui<-fluidPage(
         tags$br(),
         tags$em("A web application to calculate age and gender specific centiles for nonHDL cholesterol"),
         tags$br(),
-        "NIHR Diagnostic Evidence Co-operative Newcastle. March 2017",
+        "NIHR Diagnostic Evidence Co-operative Newcastle. June 2017",
         tags$br(),
         verbatimTextOutput("lines")
     )
