@@ -27,7 +27,7 @@ source("functions/functions.R")
 source("functions/read_data_rmlipid.R")
 read_data(read)
 
-
+  
 # add factor in for year
 hse2014_chol$year <- 2014
 hse2013_chol$year <- 2013
@@ -52,6 +52,8 @@ hse2003_chol$sex[hse2013_chol$sex == "2"] <- "Women"
 hsedata = rbind.data.frame(hse2003_chol, hse2006_chol,hse2008_chol,
                            hse2012_chol, hse2013_chol, hse2014_chol)
 
+hsedata$sex[hsedata$sex == "Male"] <- "Men"
+hsedata$sex[hsedata$sex == "Female"] <- "Women"
 
 hsedata$age <- as.integer(hsedata$age)
 hsedata$totchol <- as.numeric(hsedata$totchol)
@@ -78,6 +80,8 @@ hse_nonhdl$nonhdl <- 0
 
 hse_nonhdl$nonhdl <- hse_nonhdl$totchol - hse_nonhdl$hdlchol 
 
+
+
 # new age groups for TC cutoffs for NICE, group men and women
   hse_nonhdl$age_group1 <- ""
 
@@ -102,7 +106,7 @@ hse_nonhdl$nonhdl <- hse_nonhdl$totchol - hse_nonhdl$hdlchol
 
   n1 <- count(hse_nonhdl$age_group1)
   TCcentiles1<- cbind(TCcentiles1, n1$freq)
-  colnames(TCcentiles1)[9] <- "n"
+  colnames(TCcentiles1)[11] <- "n"
 
   # new age groups for TC cutoffs for NICE, group men and women
   hse_nonhdl$age_group2 <- ""
@@ -130,7 +134,7 @@ hse_nonhdl$nonhdl <- hse_nonhdl$totchol - hse_nonhdl$hdlchol
   
   n2 <- count(hse_nonhdl$age_group2)
   TCcentiles2<- cbind(TCcentiles2, n2$freq)
-  colnames(TCcentiles2)[9] <- "n"
+  colnames(TCcentiles2)[11] <- "n"
   
   
   # new age groups for TC cutoffs for NICE, group men and women
@@ -159,13 +163,70 @@ hse_nonhdl$nonhdl <- hse_nonhdl$totchol - hse_nonhdl$hdlchol
   
   n3 <- count(hse_nonhdl$age_group3)
   TCcentiles3<- cbind(TCcentiles3, n3$freq)
-  colnames(TCcentiles3)[9] <- "n"
+  colnames(TCcentiles3)[11] <- "n"
   
-
+  
+  
   
   write.csv(TCcentiles1, "For NICE/TCcentiles_agegroup1.csv")
   write.csv(TCcentiles2, "For NICE/TCcentiles_agegroup2.csv")
   write.csv(TCcentiles3, "For NICE/TCcentiles_agegroup3.csv")
   
+  #update on 16th August - redo age group 3 split between men and women
+  # and create an extra age grouping sytem.
+  
+  hse_nonhdl$age_group4 <- ""
+  
+  hse_nonhdl$age_group4 <- ifelse(hse_nonhdl$age <= 34, "<34",hse_nonhdl$age_group4)
+  hse_nonhdl$age_group4 <- ifelse(hse_nonhdl$age >= 35 & hse_nonhdl$age <= 54, "35-54", hse_nonhdl$age_group4)
+  hse_nonhdl$age_group4 <- ifelse(hse_nonhdl$age >= 55, ">55", hse_nonhdl$age_group4)
+ 
+  
+  nrow(hse_nonhdl)
+  
+  hse_men <- subset(hse_nonhdl,hse_nonhdl$sex == "Men")
+  hse_women <- subset(hse_nonhdl,hse_nonhdl$sex == "Women")
+  
+  nrow(hse_men)
+  nrow(hse_women)
+  
+  TCcentiles3_m <- ddply(hse_men, .(age_group3), function(hse_nonhdl.sub) quantile(hse_nonhdl.sub$totchol, c(.75,.80,.90, .95, .975, .99, .9925, .995, .9975)))
+  TCcentiles3_w <- ddply(hse_women, .(age_group3), function(hse_nonhdl.sub) quantile(hse_nonhdl.sub$totchol, c(.75,.80,.90, .95, .975, .99, .9925, .995, .9975)))
+  
+  n3m <- count(hse_men$age_group3)
+  TCcentiles3_m<- cbind(TCcentiles3_m, n3m$freq)
+  colnames(TCcentiles3_m)[11] <- "n"
+
+  n3w <- count(hse_women$age_group3)
+  TCcentiles3_w<- cbind(TCcentiles3_w, n3w$freq)
+  colnames(TCcentiles3_w)[11] <- "n"
+  
+  write.csv(TCcentiles3_m, "For NICE/TCcentiles_agegroup3m.csv")
+  write.csv(TCcentiles3_w, "For NICE/TCcentiles_agegroup3w.csv")
+  
+  # group 4 split by sex
+  
+  TCcentiles4_m <- ddply(hse_men, .(age_group4), function(hse_nonhdl.sub) quantile(hse_nonhdl.sub$totchol, c(.75,.80,.90, .95, .975, .99, .9925, .995, .9975)))
+  TCcentiles4_w <- ddply(hse_women, .(age_group4), function(hse_nonhdl.sub) quantile(hse_nonhdl.sub$totchol, c(.75,.80,.90, .95, .975, .99, .9925, .995, .9975)))
+  
+  n4m <- count(hse_men$age_group4)
+  TCcentiles4_m<- cbind(TCcentiles4_m, n4m$freq)
+  colnames(TCcentiles4_m)[11] <- "n"
+  
+  n4w <- count(hse_women$age_group4)
+  TCcentiles4_w<- cbind(TCcentiles4_w, n4w$freq)
+  colnames(TCcentiles4_w)[11] <- "n"
+  
+  write.csv(TCcentiles4_m, "For NICE/TCcentiles_agegroup4m.csv")
+  write.csv(TCcentiles4_w, "For NICE/TCcentiles_agegroup4w.csv")
   
   
+  # not split by sex
+  
+  TCcentiles4 <- ddply(hse_nonhdl, .(age_group4), function(hse_nonhdl.sub) quantile(hse_nonhdl.sub$totchol, c(.75,.80,.90, .95, .975, .99, .9925, .995, .9975)))
+  
+  n4 <- count(hse_nonhdl$age_group4)
+  TCcentiles4 <- cbind(TCcentiles4, n4$freq)
+  colnames(TCcentiles4)[11] <- "n"
+  
+  write.csv(TCcentiles4, "For NICE/TCcentiles_agegroup4.csv")
