@@ -1,0 +1,5 @@
+This folder contains files to be shared between different computers.
+
+The only calculations which take place in this folder are those for the shiny applications.  This may also move.  
+
+10th August 2017

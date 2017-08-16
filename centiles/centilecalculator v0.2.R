@@ -1,4 +1,6 @@
 
+# calculator for use within applications, read's in curves which have already been generated.  
+
 library(shiny)
 library(ggplot2)
 library(dplyr)
