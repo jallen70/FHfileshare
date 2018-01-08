@@ -94,8 +94,11 @@ colnames(freq) <-c("age", "male", "female")
 
 write.csv(freq, "output/age_freq_forcentiles.csv")
 
-# centilecurvem <- lms(nonhdl, age, data = hse_men)
-# centilecurvew <- lms(nonhdl, age, data = hse_women)
+centilecurvem <- lms(nonhdl, age, data = hse_men)
+centilecurvew <- lms(nonhdl, age, data = hse_women)
+
+
+fitTCm <- lms(totchol,age, data = hse_men)
 # 
 # mypath <- file.path(paste("GAMLASS centiles/centilecurves_sex", ".pdf", sep=""))
 # pdf(mypath, paper = "a4r", width = 11, height = 8)
